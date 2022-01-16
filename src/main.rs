@@ -4,11 +4,9 @@ use winit::event_loop::EventLoop;
 fn main() {
 	env_logger::init();
 
-	// Get whether this demo should be run in the background, which is determined by whether the user specified it as a
-	// command line argument. Default behaviour (for debugging purposes) is to assume the window won't be run in the
-	// background.
-	let args = std::env::args().collect::<Vec<_>>();
-	let is_background_window = args.len() > 1 && args[1] == "background";
+	// Get whether this demo should be run in the background, which is determined by whether this is built in release
+	// mode or debug mode. The window is a background window in release mode.
+	let is_background_window = !cfg!(debug_assertions);
 
 	// Create the window and let it run
 	let event_loop = EventLoop::new();
