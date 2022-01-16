@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 wgpu = "0.12"
-winit = "0.26"
+winit = { version = "0.26", features = ["x11"] }
 glam = "0.20"
 env_logger = "0.9"
 pollster = "0.2"
