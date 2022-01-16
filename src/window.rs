@@ -7,6 +7,7 @@ use winit::{
 
 pub struct DemoWindow {
 	window: Window,
+	window_size: winit::dpi::PhysicalSize<u32>,
 	surface_configuration: wgpu::SurfaceConfiguration,
 	surface: wgpu::Surface,
 	device: wgpu::Device,
@@ -35,6 +36,7 @@ impl DemoWindow {
 			// easier to run. Since I'm using a tiling window manager, I don't really care about the size.
 			Window::new(event_loop).unwrap()
 		};
+		let window_size = window.inner_size();
 
 		// Create surface.
 		let instance = wgpu::Instance::new(wgpu::Backends::VULKAN);
@@ -73,6 +75,7 @@ impl DemoWindow {
 
 		return Self {
 			window,
+			window_size,
 			surface_configuration,
 			surface,
 			device,
@@ -88,6 +91,39 @@ impl DemoWindow {
 		self.surface_configuration.height = new_size.height;
 		self.surface
 			.configure(&self.device, &self.surface_configuration);
+		self.window_size = new_size;
+	}
+
+	/**
+	 * Draw a frame. Should only be called when redraws are requested from the window.
+	 */
+	fn draw_frame(&mut self) -> Result<(), wgpu::SurfaceError> {
+		let output = self.surface.get_current_texture()?;
+		let output_texture_view = output.texture.create_view(&wgpu::TextureViewDescriptor::default());
+		let mut command_encoder = self.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
+			label: Some("Default command encoder"),
+		});
+		let render_pass = command_encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+			label: Some("Default render pass"),
+			color_attachments: &[wgpu::RenderPassColorAttachment {
+				view: &output_texture_view,
+				resolve_target: None,
+				ops: wgpu::Operations {
+					load: wgpu::LoadOp::Clear(wgpu::Color {
+						r: 72.0 / 255.0,
+						g: 56.0 / 255.0,
+						b: 98.0 / 255.0,
+						a: 1.0,
+					}),
+					store: true,
+				},
+			}],
+			depth_stencil_attachment: None, //TODO: this will need to be an actual value once I do something 3d
+		});
+		drop(render_pass);
+		self.queue.submit(std::iter::once(command_encoder.finish()));
+		output.present();
+		Ok(())
 	}
 
 	/**
@@ -111,7 +147,15 @@ impl DemoWindow {
 					_ => (),
 				},
 				Event::MainEventsCleared => self.window.request_redraw(),
-				Event::RedrawRequested(window_id) if window_id == self.window.id() => {}
+				Event::RedrawRequested(window_id) if window_id == self.window.id() => {
+					let frame_draw_result = self.draw_frame();
+					match frame_draw_result {
+						Ok(_) => (),
+						Err(wgpu::SurfaceError::Lost) => self.handle_resize(self.window_size),
+						Err(wgpu::SurfaceError::OutOfMemory) => *control_flow = ControlFlow::Exit,
+						Err(_) => (),
+					}
+				}
 				_ => (),
 			}
 		});
