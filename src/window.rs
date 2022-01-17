@@ -12,6 +12,7 @@ pub struct DemoWindow {
 	surface: wgpu::Surface,
 	device: wgpu::Device,
 	queue: wgpu::Queue,
+	scene: crate::scene::HelloWorldTriangleScene,
 }
 
 impl DemoWindow {
@@ -73,14 +74,18 @@ impl DemoWindow {
 		};
 		surface.configure(&device, &surface_configuration);
 
-		return Self {
+		// Make the scene
+		let scene = crate::scene::HelloWorldTriangleScene::new(&device);
+
+		Self {
 			window,
 			window_size,
 			surface_configuration,
 			surface,
 			device,
 			queue,
-		};
+			scene,
+		}
 	}
 
 	/**
@@ -103,24 +108,7 @@ impl DemoWindow {
 		let mut command_encoder = self.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
 			label: Some("Default command encoder"),
 		});
-		let render_pass = command_encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-			label: Some("Default render pass"),
-			color_attachments: &[wgpu::RenderPassColorAttachment {
-				view: &output_texture_view,
-				resolve_target: None,
-				ops: wgpu::Operations {
-					load: wgpu::LoadOp::Clear(wgpu::Color {
-						r: 72.0 / 255.0,
-						g: 56.0 / 255.0,
-						b: 98.0 / 255.0,
-						a: 1.0,
-					}),
-					store: true,
-				},
-			}],
-			depth_stencil_attachment: None, //TODO: this will need to be an actual value once I do something 3d
-		});
-		drop(render_pass);
+		self.scene.render(&mut command_encoder, &output_texture_view);
 		self.queue.submit(std::iter::once(command_encoder.finish()));
 		output.present();
 		Ok(())
