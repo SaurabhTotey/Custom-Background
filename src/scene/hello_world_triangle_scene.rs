@@ -6,7 +6,7 @@ pub struct HelloWorldTriangleScene {
 }
 
 impl HelloWorldTriangleScene {
-	pub fn new(device: &wgpu::Device, render_format: wgpu::TextureFormat) -> Self {
+	pub fn new(device: &wgpu::Device, surface_configuration: &wgpu::SurfaceConfiguration) -> Self {
 		let shader_module =
 			device.create_shader_module(&wgpu::include_wgsl!("hello_world_triangle.wgsl"));
 		let render_pipeline_layout =
@@ -27,7 +27,7 @@ impl HelloWorldTriangleScene {
 				module: &shader_module,
 				entry_point: "fragment_stage",
 				targets: &[wgpu::ColorTargetState {
-					format: render_format,
+					format: surface_configuration.format,
 					blend: Some(wgpu::BlendState::PREMULTIPLIED_ALPHA_BLENDING),
 					write_mask: wgpu::ColorWrites::all(),
 				}],
@@ -39,9 +39,15 @@ impl HelloWorldTriangleScene {
 		});
 		Self { render_pipeline }
 	}
+}
 
-	pub fn render(
-		&self,
+impl crate::scene::Scene for HelloWorldTriangleScene {
+	fn resize(&mut self, _: &wgpu::SurfaceConfiguration) {}
+
+	fn update(&mut self, _: f32) {}
+
+	fn render(
+		&mut self,
 		command_encoder: &mut wgpu::CommandEncoder,
 		output_texture_view: &wgpu::TextureView,
 	) {

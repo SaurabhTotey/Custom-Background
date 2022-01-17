@@ -1,3 +1,4 @@
+use crate::scene::Scene;
 use winit::{
 	event::{Event, WindowEvent},
 	event_loop::{ControlFlow, EventLoop},
@@ -12,7 +13,7 @@ pub struct DemoWindow {
 	surface: wgpu::Surface,
 	device: wgpu::Device,
 	queue: wgpu::Queue,
-	scene: crate::scene::HelloWorldTriangleScene,
+	scene: Box<dyn Scene>,
 }
 
 impl DemoWindow {
@@ -75,8 +76,12 @@ impl DemoWindow {
 		surface.configure(&device, &surface_configuration);
 
 		// Make the scene
-		let scene =
-			crate::scene::HelloWorldTriangleScene::new(&device, surface_configuration.format);
+		let scene = Box::new(
+			crate::scene::hello_world_triangle_scene::HelloWorldTriangleScene::new(
+				&device,
+				&surface_configuration,
+			),
+		);
 
 		Self {
 			window,
