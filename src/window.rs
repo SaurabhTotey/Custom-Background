@@ -75,7 +75,8 @@ impl DemoWindow {
 		surface.configure(&device, &surface_configuration);
 
 		// Make the scene
-		let scene = crate::scene::HelloWorldTriangleScene::new(&device);
+		let scene =
+			crate::scene::HelloWorldTriangleScene::new(&device, surface_configuration.format);
 
 		Self {
 			window,
@@ -104,11 +105,16 @@ impl DemoWindow {
 	 */
 	fn draw_frame(&mut self) -> Result<(), wgpu::SurfaceError> {
 		let output = self.surface.get_current_texture()?;
-		let output_texture_view = output.texture.create_view(&wgpu::TextureViewDescriptor::default());
-		let mut command_encoder = self.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
-			label: Some("Default command encoder"),
-		});
-		self.scene.render(&mut command_encoder, &output_texture_view);
+		let output_texture_view = output
+			.texture
+			.create_view(&wgpu::TextureViewDescriptor::default());
+		let mut command_encoder =
+			self.device
+				.create_command_encoder(&wgpu::CommandEncoderDescriptor {
+					label: Some("Default command encoder"),
+				});
+		self.scene
+			.render(&mut command_encoder, &output_texture_view);
 		self.queue.submit(std::iter::once(command_encoder.finish()));
 		output.present();
 		Ok(())

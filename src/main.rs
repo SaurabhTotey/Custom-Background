@@ -1,5 +1,5 @@
-mod window;
 mod scene;
+mod window;
 use winit::event_loop::EventLoop;
 
 fn main() {
