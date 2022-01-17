@@ -103,6 +103,7 @@ impl DemoWindow {
 		self.surface
 			.configure(&self.device, &self.surface_configuration);
 		self.window_size = new_size;
+		self.scene.resize(&self.surface_configuration);
 	}
 
 	/**
@@ -130,6 +131,7 @@ impl DemoWindow {
 	 * While the window is open, this function is blocking.
 	 */
 	pub fn run(mut self, event_loop: EventLoop<()>) {
+		let mut previous_frame_time = 0.0;
 		event_loop.run(move |event, _, control_flow| {
 			*control_flow = ControlFlow::Wait;
 			match event {
@@ -147,6 +149,8 @@ impl DemoWindow {
 				},
 				Event::MainEventsCleared => self.window.request_redraw(),
 				Event::RedrawRequested(window_id) if window_id == self.window.id() => {
+					let frame_start_instant = std::time::Instant::now();
+					self.scene.update(previous_frame_time);
 					let frame_draw_result = self.draw_frame();
 					match frame_draw_result {
 						Ok(_) => (),
@@ -154,6 +158,7 @@ impl DemoWindow {
 						Err(wgpu::SurfaceError::OutOfMemory) => *control_flow = ControlFlow::Exit,
 						Err(_) => (),
 					}
+					previous_frame_time = frame_start_instant.elapsed().as_secs_f32();
 				}
 				_ => (),
 			}
