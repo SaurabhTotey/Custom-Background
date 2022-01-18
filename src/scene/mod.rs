@@ -1,3 +1,4 @@
+pub mod bouncing_cube;
 pub mod hello_world_triangle;
 pub mod utilities;
 
