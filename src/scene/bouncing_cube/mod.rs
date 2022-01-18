@@ -12,13 +12,41 @@ pub struct BouncingCubeScene {
 	cube_velocity: glam::Vec3A,
 }
 
-impl BouncingCubeScene {
-
-}
+impl BouncingCubeScene {}
 
 impl crate::scene::Scene for BouncingCubeScene {
 	fn resize(&mut self, _: &wgpu::SurfaceConfiguration) {}
-	fn update(&mut self, _: f32) {}
+
+	fn update(&mut self, dt: f32) {
+		self.cube_position += self.cube_velocity * dt;
+		// TODO: I am assuming a cube of sidelength 0.2 with the position defining its center
+		// TODO: Need to look into pushing z back to higher values with a transform possibly
+		if self.cube_position.x < -0.9 {
+			self.cube_position.x = -0.9;
+			self.cube_position.x *= -1.0;
+		}
+		if self.cube_position.x > 0.9 {
+			self.cube_position.x = 0.9;
+			self.cube_position.x *= -1.0;
+		}
+		if self.cube_position.y < -0.9 {
+			self.cube_position.y = -0.9;
+			self.cube_position.y *= -1.0;
+		}
+		if self.cube_position.y > 0.9 {
+			self.cube_position.y = 0.9;
+			self.cube_position.y *= -1.0;
+		}
+		if self.cube_position.z < -0.9 {
+			self.cube_position.z = -0.9;
+			self.cube_position.z *= -1.0;
+		}
+		if self.cube_position.z > 0.9 {
+			self.cube_position.z = 0.9;
+			self.cube_position.z *= -1.0;
+		}
+	}
+
 	fn render(
 		&mut self,
 		command_encoder: &mut wgpu::CommandEncoder,
