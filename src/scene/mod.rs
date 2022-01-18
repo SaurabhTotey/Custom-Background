@@ -1,4 +1,5 @@
 pub mod hello_world_triangle;
+pub mod utilities;
 
 /**
  * List required functionality of all scenes.
