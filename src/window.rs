@@ -1,3 +1,4 @@
+use crate::scene::hello_world_triangle::HelloWorldTriangleScene;
 use crate::scene::Scene;
 use winit::{
 	event::{Event, WindowEvent},
@@ -76,12 +77,10 @@ impl DemoWindow {
 		surface.configure(&device, &surface_configuration);
 
 		// Make the scene
-		let scene = Box::new(
-			crate::scene::hello_world_triangle_scene::HelloWorldTriangleScene::new(
-				&device,
-				&surface_configuration,
-			),
-		);
+		let scene = Box::new(HelloWorldTriangleScene::new(
+			&device,
+			&surface_configuration,
+		));
 
 		Self {
 			window,

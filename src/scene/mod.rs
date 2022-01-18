@@ -1,4 +1,4 @@
-pub mod hello_world_triangle_scene;
+pub mod hello_world_triangle;
 
 /**
  * List required functionality of all scenes.

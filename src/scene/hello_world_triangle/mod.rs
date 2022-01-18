@@ -1,14 +1,38 @@
-/**
- * TODO: eventually make a generalized trait for Scenes that specific scenes can implement
- */
+use wgpu::util::DeviceExt;
+
+#[repr(C)]
+#[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
+struct HelloWorldTriangleVertex {
+	position: [f32; 2],
+	color: [f32; 3],
+}
+
 pub struct HelloWorldTriangleScene {
 	render_pipeline: wgpu::RenderPipeline,
+	vertex_buffer: wgpu::Buffer,
 }
 
 impl HelloWorldTriangleScene {
 	pub fn new(device: &wgpu::Device, surface_configuration: &wgpu::SurfaceConfiguration) -> Self {
-		let shader_module =
-			device.create_shader_module(&wgpu::include_wgsl!("hello_world_triangle.wgsl"));
+		let shader_module = device.create_shader_module(&wgpu::include_wgsl!("shader.wgsl"));
+		let vertex_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+			label: Some("Hello world triangle vertex buffer"),
+			contents: bytemuck::cast_slice(&[
+				HelloWorldTriangleVertex {
+					position: [-0.5, -0.5],
+					color: [1.0, 0.0, 0.0],
+				},
+				HelloWorldTriangleVertex {
+					position: [0.5, -0.5],
+					color: [0.0, 1.0, 0.0],
+				},
+				HelloWorldTriangleVertex {
+					position: [0.0, 0.5],
+					color: [0.0, 0.0, 1.0],
+				},
+			]),
+			usage: wgpu::BufferUsages::VERTEX,
+		});
 		let render_pipeline_layout =
 			device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
 				label: Some("Hello world triangle scene pipeline layout"),
@@ -21,7 +45,12 @@ impl HelloWorldTriangleScene {
 			vertex: wgpu::VertexState {
 				module: &shader_module,
 				entry_point: "vertex_stage",
-				buffers: &[],
+				buffers: &[wgpu::VertexBufferLayout {
+					array_stride: std::mem::size_of::<HelloWorldTriangleVertex>()
+						as wgpu::BufferAddress,
+					step_mode: wgpu::VertexStepMode::Vertex,
+					attributes: &wgpu::vertex_attr_array![0 => Float32x2, 1 => Float32x3],
+				}],
 			},
 			fragment: Some(wgpu::FragmentState {
 				module: &shader_module,
@@ -37,7 +66,10 @@ impl HelloWorldTriangleScene {
 			multisample: wgpu::MultisampleState::default(),
 			multiview: None,
 		});
-		Self { render_pipeline }
+		Self {
+			render_pipeline,
+			vertex_buffer,
+		}
 	}
 }
 
@@ -58,9 +90,9 @@ impl crate::scene::Scene for HelloWorldTriangleScene {
 				resolve_target: None,
 				ops: wgpu::Operations {
 					load: wgpu::LoadOp::Clear(wgpu::Color {
-						r: 138.0 / 255.0,
-						g: 43.0 / 255.0,
-						b: 226.0 / 255.0,
+						r: 0.5,
+						g: 0.5,
+						b: 0.5,
 						a: 1.0,
 					}),
 					store: true,
@@ -69,6 +101,7 @@ impl crate::scene::Scene for HelloWorldTriangleScene {
 			depth_stencil_attachment: None,
 		});
 		render_pass.set_pipeline(&self.render_pipeline);
+		render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
 		render_pass.draw(0..3, 0..1);
 	}
 }

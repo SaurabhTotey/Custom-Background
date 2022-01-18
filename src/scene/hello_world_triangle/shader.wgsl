@@ -1,5 +1,6 @@
 struct VertexInput {
-	[[builtin(vertex_index)]] vertex_index: u32;
+	[[location(0)]] position: vec2<f32>;
+	[[location(1)]] color: vec3<f32>;
 };
 
 struct FragmentInput {
@@ -13,12 +14,10 @@ struct FragmentOutput {
 
 [[stage(vertex)]]
 fn vertex_stage(input: VertexInput) -> FragmentInput {
-	var positions: array<vec4<f32>, 3u> = array<vec4<f32>, 3u>(
-		vec4<f32>(-0.5, -0.5, 0.0, 1.0),
-		vec4<f32>(0.5, -0.5, 0.0, 1.0),
-		vec4<f32>(0.0, 0.5, 0.0, 1.0),
+	return FragmentInput(
+		vec4<f32>(input.position.x, input.position.y, 0.0, 1.0),
+		vec4<f32>(input.color.x, input.color.y, input.color.z, 1.0),
 	);
-	return FragmentInput(positions[input.vertex_index], vec4<f32>(1.0, 1.0, 1.0, 1.0));
 }
 
 [[stage(fragment)]]
