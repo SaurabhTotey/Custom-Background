@@ -1,5 +1,6 @@
 struct VertexInput {
 	[[location(0)]] position: vec3<f32>;
+	[[location(1)]] color: vec3<f32>;
 };
 
 struct CubeTransformation {
@@ -10,6 +11,7 @@ var<uniform> transformation: CubeTransformation;
 
 struct FragmentInput {
 	[[builtin(position)]] position: vec4<f32>;
+	[[location(0)]] color: vec4<f32>;
 };
 
 struct FragmentOutput {
@@ -20,10 +22,11 @@ struct FragmentOutput {
 fn vertex_stage(input: VertexInput) -> FragmentInput {
 	return FragmentInput(
 		transformation.transformation * vec4<f32>(input.position.x, input.position.y, input.position.z, 1.0),
+		vec4<f32>(input.color.x, input.color.y, input.color.z, 1.0),
 	);
 }
 
 [[stage(fragment)]]
 fn fragment_stage(input: FragmentInput) -> FragmentOutput {
-	return FragmentOutput(vec4<f32>(1.0, 1.0, 1.0, 1.0));
+	return FragmentOutput(input.color);
 }

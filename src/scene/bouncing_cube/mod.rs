@@ -5,6 +5,7 @@ use wgpu::util::DeviceExt;
 #[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
 struct BouncingCubeVertex {
 	position: [f32; 3],
+	color: [f32; 3],
 }
 
 pub struct BouncingCubeScene {
@@ -30,80 +31,104 @@ impl BouncingCubeScene {
 				// back face
 				BouncingCubeVertex {
 					position: [-0.1, -0.1, -0.1],
+					color: [1.0, 0.0, 0.0],
 				},
 				BouncingCubeVertex {
 					position: [0.1, -0.1, -0.1],
+					color: [1.0, 0.0, 0.0],
 				},
 				BouncingCubeVertex {
 					position: [0.1, 0.1, -0.1],
+					color: [1.0, 0.0, 0.0],
 				},
 				BouncingCubeVertex {
 					position: [-0.1, 0.1, -0.1],
+					color: [1.0, 0.0, 0.0],
 				},
 				// front face
 				BouncingCubeVertex {
 					position: [-0.1, -0.1, 0.1],
+					color: [1.0, 0.0, 0.0],
 				},
 				BouncingCubeVertex {
 					position: [0.1, -0.1, 0.1],
+					color: [1.0, 0.0, 0.0],
 				},
 				BouncingCubeVertex {
 					position: [0.1, 0.1, 0.1],
+					color: [1.0, 0.0, 0.0],
 				},
 				BouncingCubeVertex {
 					position: [-0.1, 0.1, 0.1],
+					color: [1.0, 0.0, 0.0],
 				},
 				// left face
 				BouncingCubeVertex {
 					position: [-0.1, -0.1, -0.1],
+					color: [0.0, 1.0, 0.0],
 				},
 				BouncingCubeVertex {
 					position: [-0.1, -0.1, 0.1],
+					color: [0.0, 1.0, 0.0],
 				},
 				BouncingCubeVertex {
 					position: [-0.1, 0.1, 0.1],
+					color: [0.0, 1.0, 0.0],
 				},
 				BouncingCubeVertex {
 					position: [-0.1, 0.1, -0.1],
+					color: [0.0, 1.0, 0.0],
 				},
 				// right face
 				BouncingCubeVertex {
 					position: [0.1, -0.1, -0.1],
+					color: [0.0, 1.0, 0.0],
 				},
 				BouncingCubeVertex {
 					position: [0.1, -0.1, 0.1],
+					color: [0.0, 1.0, 0.0],
 				},
 				BouncingCubeVertex {
 					position: [0.1, 0.1, 0.1],
+					color: [0.0, 1.0, 0.0],
 				},
 				BouncingCubeVertex {
 					position: [0.1, 0.1, -0.1],
+					color: [0.0, 1.0, 0.0],
 				},
 				// bottom face
 				BouncingCubeVertex {
 					position: [-0.1, -0.1, 0.1],
+					color: [0.0, 0.0, 1.0],
 				},
 				BouncingCubeVertex {
 					position: [0.1, -0.1, 0.1],
+					color: [0.0, 0.0, 1.0],
 				},
 				BouncingCubeVertex {
 					position: [0.1, -0.1, -0.1],
+					color: [0.0, 0.0, 1.0],
 				},
 				BouncingCubeVertex {
 					position: [-0.1, -0.1, -0.1],
+					color: [0.0, 0.0, 1.0],
 				},
 				// top face
 				BouncingCubeVertex {
 					position: [-0.1, 0.1, 0.1],
+					color: [0.0, 0.0, 1.0],
 				},
 				BouncingCubeVertex {
 					position: [0.1, 0.1, 0.1],
+					color: [0.0, 0.0, 1.0],
 				},
 				BouncingCubeVertex {
 					position: [0.1, 0.1, -0.1],
+					color: [0.0, 0.0, 1.0],
 				},
 				BouncingCubeVertex {
 					position: [-0.1, 0.1, -0.1],
+					color: [0.0, 0.0, 1.0],
 				},
 			]),
 			usage: wgpu::BufferUsages::VERTEX,
@@ -166,7 +191,7 @@ impl BouncingCubeScene {
 				buffers: &[wgpu::VertexBufferLayout {
 					array_stride: std::mem::size_of::<BouncingCubeVertex>() as wgpu::BufferAddress,
 					step_mode: wgpu::VertexStepMode::Vertex,
-					attributes: &wgpu::vertex_attr_array![0 => Float32x3],
+					attributes: &wgpu::vertex_attr_array![0 => Float32x3, 1 => Float32x3],
 				}],
 			},
 			fragment: Some(wgpu::FragmentState {
