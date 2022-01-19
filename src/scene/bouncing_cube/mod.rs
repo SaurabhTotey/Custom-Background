@@ -221,8 +221,7 @@ impl crate::scene::Scene for BouncingCubeScene {
 
 	fn update(&mut self, dt: f32) {
 		self.cube_position += self.cube_velocity * dt;
-		// TODO: I am assuming a cube of sidelength 0.2 with the position defining its center
-		// TODO: Need to look into pushing z back to higher values with a transform possibly
+		// TODO: determine good values for cube bounds
 		if self.cube_position.x < -0.9 {
 			self.cube_position.x = -0.9;
 			self.cube_position.x *= -1.0;
@@ -252,6 +251,7 @@ impl crate::scene::Scene for BouncingCubeScene {
 	fn render(
 		&mut self,
 		command_encoder: &mut wgpu::CommandEncoder,
+		queue: &wgpu::Queue,
 		output_texture_view: &wgpu::TextureView,
 	) {
 		let mut render_pass = command_encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
@@ -278,11 +278,18 @@ impl crate::scene::Scene for BouncingCubeScene {
 				stencil_ops: None,
 			}),
 		});
-		// TODO: update cube transform
+		queue.write_buffer(
+			&self.cube_transform_uniform_buffer,
+			0,
+			bytemuck::bytes_of(
+				&(self.camera.transformation
+					* glam::Mat4::from_translation(self.cube_position.into())),
+			),
+		);
 		render_pass.set_pipeline(&self.render_pipeline);
 		render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
 		render_pass.set_index_buffer(self.index_buffer.slice(..), wgpu::IndexFormat::Uint32);
 		render_pass.set_bind_group(0, &self.cube_transform_uniform_bind_group, &[]);
-		// TODO: draw call
+		render_pass.draw_indexed(0..36, 0, 0..1);
 	}
 }

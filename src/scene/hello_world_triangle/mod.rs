@@ -81,6 +81,7 @@ impl crate::scene::Scene for HelloWorldTriangleScene {
 	fn render(
 		&mut self,
 		command_encoder: &mut wgpu::CommandEncoder,
+		_: &wgpu::Queue,
 		output_texture_view: &wgpu::TextureView,
 	) {
 		let mut render_pass = command_encoder.begin_render_pass(&wgpu::RenderPassDescriptor {

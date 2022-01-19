@@ -1,17 +1,17 @@
 const UP_DIRECTION: glam::Vec3A = glam::const_vec3a!([0.0, -1.0, 0.0]);
 
 pub struct Camera {
-	field_of_view: f32,
-	aspect_ratio: f32,
-	near_plane_distance: f32,
-	far_plane_distance: f32,
-	position: glam::Vec3A,
-	look_direction: glam::Vec3A,
-	right_direction: glam::Vec3A,
-	yaw: f32,
-	pitch: f32,
-	transformation: glam::Mat4,
-	view_planes: [glam::Vec4; 6],
+	pub field_of_view: f32,
+	pub aspect_ratio: f32,
+	pub near_plane_distance: f32,
+	pub far_plane_distance: f32,
+	pub position: glam::Vec3A,
+	pub look_direction: glam::Vec3A,
+	pub right_direction: glam::Vec3A,
+	pub yaw: f32,
+	pub pitch: f32,
+	pub transformation: glam::Mat4,
+	pub view_planes: [glam::Vec4; 6],
 }
 impl Camera {
 	pub fn new(field_of_view: f32, aspect_ratio: f32) -> Self {

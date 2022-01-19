@@ -119,7 +119,7 @@ impl DemoWindow {
 					label: Some("Default command encoder"),
 				});
 		self.scene
-			.render(&mut command_encoder, &output_texture_view);
+			.render(&mut command_encoder, &self.queue, &output_texture_view);
 		self.queue.submit(std::iter::once(command_encoder.finish()));
 		output.present();
 		Ok(())
