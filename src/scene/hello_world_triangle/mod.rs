@@ -74,7 +74,7 @@ impl HelloWorldTriangleScene {
 }
 
 impl crate::scene::Scene for HelloWorldTriangleScene {
-	fn resize(&mut self, _: &wgpu::SurfaceConfiguration) {}
+	fn resize(&mut self, _: &wgpu::Device, _: &wgpu::SurfaceConfiguration) {}
 
 	fn update(&mut self, _: f32) {}
 

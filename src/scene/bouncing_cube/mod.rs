@@ -141,6 +141,11 @@ impl BouncingCubeScene {
 					resource: cube_transform_uniform_buffer.as_entire_binding(),
 				}],
 			});
+		let depth_texture = crate::scene::utilities::texture::Texture::create_depth_texture(
+			device,
+			surface_configuration,
+			"Bouncing cube scene",
+		);
 		let render_pipeline_layout =
 			device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
 				label: Some("Bouncing cube scene pipeline layout"),
@@ -170,7 +175,7 @@ impl BouncingCubeScene {
 			}),
 			primitive: wgpu::PrimitiveState::default(),
 			depth_stencil: Some(wgpu::DepthStencilState {
-				format: wgpu::TextureFormat::Depth32Float,
+				format: crate::scene::utilities::texture::Texture::DEPTH_FORMAT,
 				depth_write_enabled: true,
 				depth_compare: wgpu::CompareFunction::Less,
 				stencil: wgpu::StencilState::default(),
@@ -185,12 +190,23 @@ impl BouncingCubeScene {
 			index_buffer,
 			cube_transform_uniform_buffer,
 			cube_transform_uniform_bind_group,
+			depth_texture,
 		}
 	}
 }
 
 impl crate::scene::Scene for BouncingCubeScene {
-	fn resize(&mut self, _: &wgpu::SurfaceConfiguration) {}
+	fn resize(
+		&mut self,
+		device: &wgpu::Device,
+		surface_configuration: &wgpu::SurfaceConfiguration,
+	) {
+		self.depth_texture = crate::scene::utilities::texture::Texture::create_depth_texture(
+			device,
+			surface_configuration,
+			"Bouncing cube scene",
+		);
+	}
 
 	fn update(&mut self, dt: f32) {
 		self.cube_position += self.cube_velocity * dt;

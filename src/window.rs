@@ -102,7 +102,7 @@ impl DemoWindow {
 		self.surface
 			.configure(&self.device, &self.surface_configuration);
 		self.window_size = new_size;
-		self.scene.resize(&self.surface_configuration);
+		self.scene.resize(&self.device, &self.surface_configuration);
 	}
 
 	/**
