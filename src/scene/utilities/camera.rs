@@ -58,7 +58,7 @@ impl Camera {
 	/**
 	 * Recalculate the transformation matrix and view planes for this camera and store them in the camera.
 	 */
-	fn recalculate_transformation_and_view_planes(&mut self) {
+	pub fn recalculate_transformation_and_view_planes(&mut self) {
 		// Calculate the new tranformation matrix.
 		let view_matrix = glam::Mat4::look_at_rh(
 			self.position.into(),

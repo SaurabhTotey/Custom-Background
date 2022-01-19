@@ -214,6 +214,9 @@ impl crate::scene::Scene for BouncingCubeScene {
 		device: &wgpu::Device,
 		surface_configuration: &wgpu::SurfaceConfiguration,
 	) {
+		self.camera.aspect_ratio =
+			surface_configuration.width as f32 / surface_configuration.height as f32;
+		self.camera.recalculate_transformation_and_view_planes();
 		self.depth_texture = crate::scene::utilities::texture::Texture::create_depth_texture(
 			device,
 			surface_configuration,
