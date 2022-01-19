@@ -16,7 +16,7 @@ impl HelloWorldTriangleScene {
 	pub fn new(device: &wgpu::Device, surface_configuration: &wgpu::SurfaceConfiguration) -> Self {
 		let shader_module = device.create_shader_module(&wgpu::include_wgsl!("shader.wgsl"));
 		let vertex_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-			label: Some("Hello world triangle vertex buffer"),
+			label: Some("Hello world triangle scene vertex buffer"),
 			contents: bytemuck::cast_slice(&[
 				HelloWorldTriangleVertex {
 					position: [-0.5, -0.5],
@@ -84,7 +84,7 @@ impl crate::scene::Scene for HelloWorldTriangleScene {
 		output_texture_view: &wgpu::TextureView,
 	) {
 		let mut render_pass = command_encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-			label: Some("Hello world triangle render pass"),
+			label: Some("Hello world triangle scene render pass"),
 			color_attachments: &[wgpu::RenderPassColorAttachment {
 				view: output_texture_view,
 				resolve_target: None,
