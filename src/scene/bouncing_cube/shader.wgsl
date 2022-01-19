@@ -19,7 +19,7 @@ struct FragmentOutput {
 [[stage(vertex)]]
 fn vertex_stage(input: VertexInput) -> FragmentInput {
 	return FragmentInput(
-		vec4<f32>(input.position.x, input.position.y, input.position.z, 1.0) * transformation.transformation,
+		transformation.transformation * vec4<f32>(input.position.x, input.position.y, input.position.z, 1.0),
 	);
 }
 

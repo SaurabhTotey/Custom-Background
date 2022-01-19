@@ -192,8 +192,8 @@ impl BouncingCubeScene {
 			surface_configuration.width as f32 / surface_configuration.height as f32,
 		);
 		let mut rng = rand::thread_rng();
-		let cube_position = rng.gen();
-		let cube_velocity = rng.gen();
+		let cube_position = rng.gen::<glam::Vec3A>().normalize();
+		let cube_velocity = rng.gen::<glam::Vec3A>().normalize() * 5.0;
 		Self {
 			render_pipeline,
 			vertex_buffer,
