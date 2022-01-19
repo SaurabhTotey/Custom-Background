@@ -193,7 +193,7 @@ impl BouncingCubeScene {
 		);
 		let mut rng = rand::thread_rng();
 		let cube_position = rng.gen::<glam::Vec3A>().normalize();
-		let cube_velocity = rng.gen::<glam::Vec3A>().normalize() * 5.0;
+		let cube_velocity = rng.gen::<glam::Vec3A>().normalize() * 3.0;
 		Self {
 			render_pipeline,
 			vertex_buffer,
@@ -226,27 +226,27 @@ impl crate::scene::Scene for BouncingCubeScene {
 		// TODO: determine good values for cube bounds
 		if self.cube_position.x < -0.9 {
 			self.cube_position.x = -0.9;
-			self.cube_position.x *= -1.0;
+			self.cube_velocity.x *= -1.0;
 		}
 		if self.cube_position.x > 0.9 {
 			self.cube_position.x = 0.9;
-			self.cube_position.x *= -1.0;
+			self.cube_velocity.x *= -1.0;
 		}
 		if self.cube_position.y < -0.9 {
 			self.cube_position.y = -0.9;
-			self.cube_position.y *= -1.0;
+			self.cube_velocity.y *= -1.0;
 		}
 		if self.cube_position.y > 0.9 {
 			self.cube_position.y = 0.9;
-			self.cube_position.y *= -1.0;
+			self.cube_velocity.y *= -1.0;
 		}
 		if self.cube_position.z < -0.9 {
 			self.cube_position.z = -0.9;
-			self.cube_position.z *= -1.0;
+			self.cube_velocity.z *= -1.0;
 		}
 		if self.cube_position.z > 0.9 {
 			self.cube_position.z = 0.9;
-			self.cube_position.z *= -1.0;
+			self.cube_velocity.z *= -1.0;
 		}
 	}
 
