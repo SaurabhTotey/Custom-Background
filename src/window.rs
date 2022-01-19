@@ -1,5 +1,7 @@
-use crate::scene::hello_world_triangle::HelloWorldTriangleScene;
 use crate::scene::Scene;
+use crate::scene::{
+	bouncing_cube::BouncingCubeScene, hello_world_triangle::HelloWorldTriangleScene,
+};
 use winit::{
 	event::{Event, WindowEvent},
 	event_loop::{ControlFlow, EventLoop},
@@ -77,10 +79,7 @@ impl DemoWindow {
 		surface.configure(&device, &surface_configuration);
 
 		// Make the scene
-		let scene = Box::new(HelloWorldTriangleScene::new(
-			&device,
-			&surface_configuration,
-		));
+		let scene = Box::new(BouncingCubeScene::new(&device, &surface_configuration));
 
 		Self {
 			window,

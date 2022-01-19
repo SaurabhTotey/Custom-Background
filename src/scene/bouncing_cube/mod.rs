@@ -108,9 +108,11 @@ impl BouncingCubeScene {
 		});
 		let index_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
 			label: Some("Bouncing cube scene index buffer"),
-			contents: &(0..6)
-				.flat_map(|face| [0, 1, 2, 0, 2, 3].iter().map(move |i| face * 4 + i))
-				.collect::<Vec<_>>(),
+			contents: bytemuck::cast_slice(
+				&(0..6)
+					.flat_map(|face| [0u16, 1, 2, 0, 2, 3].iter().map(move |i| face * 4 + i))
+					.collect::<Vec<_>>(),
+			),
 			usage: wgpu::BufferUsages::INDEX,
 		});
 		let cube_transform_uniform_buffer = device.create_buffer(&wgpu::BufferDescriptor {
@@ -288,7 +290,7 @@ impl crate::scene::Scene for BouncingCubeScene {
 		);
 		render_pass.set_pipeline(&self.render_pipeline);
 		render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
-		render_pass.set_index_buffer(self.index_buffer.slice(..), wgpu::IndexFormat::Uint32);
+		render_pass.set_index_buffer(self.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
 		render_pass.set_bind_group(0, &self.cube_transform_uniform_bind_group, &[]);
 		render_pass.draw_indexed(0..36, 0, 0..1);
 	}
