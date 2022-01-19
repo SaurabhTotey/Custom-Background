@@ -17,6 +17,8 @@ pub struct BouncingCubeScene {
 	camera: crate::scene::utilities::camera::Camera,
 	cube_position: glam::Vec3A,
 	cube_velocity: glam::Vec3A,
+	x_bound: f32,
+	y_bound: f32,
 }
 
 impl BouncingCubeScene {
@@ -192,8 +194,14 @@ impl BouncingCubeScene {
 			surface_configuration.width as f32 / surface_configuration.height as f32,
 		);
 		let mut rng = rand::thread_rng();
-		let cube_position = rng.gen::<glam::Vec3A>().normalize();
-		let cube_velocity = rng.gen::<glam::Vec3A>().normalize() * 3.0;
+		let y_bound = (camera.field_of_view / 2.0).tan();
+		let x_bound = y_bound * camera.aspect_ratio;
+		let cube_position = glam::Vec3A::new(
+			rng.gen_range(-x_bound + 0.1..x_bound - 0.1),
+			rng.gen_range(-y_bound + 0.1..y_bound - 0.1),
+			rng.gen_range(-0.9..0.9),
+		);
+		let cube_velocity = rng.gen::<glam::Vec3A>().normalize() * 2.0;
 		Self {
 			render_pipeline,
 			vertex_buffer,
@@ -204,6 +212,8 @@ impl BouncingCubeScene {
 			camera,
 			cube_position,
 			cube_velocity,
+			x_bound,
+			y_bound,
 		}
 	}
 }
@@ -217,6 +227,7 @@ impl crate::scene::Scene for BouncingCubeScene {
 		self.camera.aspect_ratio =
 			surface_configuration.width as f32 / surface_configuration.height as f32;
 		self.camera.recalculate_transformation_and_view_planes();
+		self.x_bound = self.y_bound * self.camera.aspect_ratio;
 		self.depth_texture = crate::scene::utilities::texture::Texture::create_depth_texture(
 			device,
 			surface_configuration,
@@ -226,21 +237,20 @@ impl crate::scene::Scene for BouncingCubeScene {
 
 	fn update(&mut self, dt: f32) {
 		self.cube_position += self.cube_velocity * dt;
-		// TODO: determine good values for cube bounds
-		if self.cube_position.x < -0.9 {
-			self.cube_position.x = -0.9;
+		if self.cube_position.x < -self.x_bound + 0.1 {
+			self.cube_position.x = -self.x_bound + 0.1;
 			self.cube_velocity.x *= -1.0;
 		}
-		if self.cube_position.x > 0.9 {
-			self.cube_position.x = 0.9;
+		if self.cube_position.x > self.x_bound - 0.1 {
+			self.cube_position.x = self.x_bound - 0.1;
 			self.cube_velocity.x *= -1.0;
 		}
-		if self.cube_position.y < -0.9 {
-			self.cube_position.y = -0.9;
+		if self.cube_position.y < -self.y_bound + 0.1 {
+			self.cube_position.y = -self.y_bound + 0.1;
 			self.cube_velocity.y *= -1.0;
 		}
-		if self.cube_position.y > 0.9 {
-			self.cube_position.y = 0.9;
+		if self.cube_position.y > self.y_bound - 0.1 {
+			self.cube_position.y = self.y_bound - 0.1;
 			self.cube_velocity.y *= -1.0;
 		}
 		if self.cube_position.z < -0.9 {
