@@ -9,6 +9,7 @@ edition = "2021"
 wgpu = "0.12"
 winit = { version = "0.26", features = ["x11"] }
 bytemuck = { version = "1.4", features = ["derive"] }
-glam = { version = "0.20", features = ["bytemuck"] }
+rand = "0.8"
+glam = { version = "0.20", features = ["bytemuck", "rand"] }
 env_logger = "0.9"
 pollster = "0.2"

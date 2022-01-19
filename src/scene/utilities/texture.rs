@@ -17,8 +17,9 @@ impl Texture {
 			height: surface_configuration.height,
 			depth_or_array_layers: 1,
 		};
+		let texture_descriptor_label = &(scene_name.to_owned() + " depth texture");
 		let texture_descriptor = wgpu::TextureDescriptor {
-			label: Some(&(scene_name.to_owned() + " depth texture")),
+			label: Some(texture_descriptor_label),
 			size: texture_extent,
 			mip_level_count: 1,
 			sample_count: 1,

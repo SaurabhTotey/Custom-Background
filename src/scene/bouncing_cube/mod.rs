@@ -1,3 +1,4 @@
+use rand::Rng;
 use wgpu::util::DeviceExt;
 
 #[repr(C)]
@@ -108,7 +109,7 @@ impl BouncingCubeScene {
 		let index_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
 			label: Some("Bouncing cube scene index buffer"),
 			contents: &(0..6)
-				.flat_map(|face| [0, 1, 2, 0, 2, 3].iter().map(|i| face * 4 + i))
+				.flat_map(|face| [0, 1, 2, 0, 2, 3].iter().map(move |i| face * 4 + i))
 				.collect::<Vec<_>>(),
 			usage: wgpu::BufferUsages::INDEX,
 		});
@@ -184,6 +185,13 @@ impl BouncingCubeScene {
 			multisample: wgpu::MultisampleState::default(),
 			multiview: None,
 		});
+		let camera = crate::scene::utilities::camera::Camera::new(
+			std::f32::consts::PI / 2.0,
+			surface_configuration.width as f32 / surface_configuration.height as f32,
+		);
+		let mut rng = rand::thread_rng();
+		let cube_position = rng.gen();
+		let cube_velocity = rng.gen();
 		Self {
 			render_pipeline,
 			vertex_buffer,
@@ -191,6 +199,9 @@ impl BouncingCubeScene {
 			cube_transform_uniform_buffer,
 			cube_transform_uniform_bind_group,
 			depth_texture,
+			camera,
+			cube_position,
+			cube_velocity,
 		}
 	}
 }
