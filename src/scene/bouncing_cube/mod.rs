@@ -18,6 +18,8 @@ pub struct BouncingCubeScene {
 	camera: crate::scene::utilities::camera::Camera,
 	cube_position: glam::Vec3A,
 	cube_velocity: glam::Vec3A,
+	cube_rotation_angle: f32,
+	cube_rotation_axis: glam::Vec3A,
 	x_bound: f32,
 	y_bound: f32,
 }
@@ -227,6 +229,8 @@ impl BouncingCubeScene {
 			rng.gen_range(-0.9..0.9),
 		);
 		let cube_velocity = rng.gen::<glam::Vec3A>().normalize() * 1.5;
+		let cube_rotation_angle = rng.gen_range(0.0..2.0 * std::f32::consts::PI);
+		let cube_rotation_axis = rng.gen::<glam::Vec3A>().normalize();
 		Self {
 			render_pipeline,
 			vertex_buffer,
@@ -237,6 +241,8 @@ impl BouncingCubeScene {
 			camera,
 			cube_position,
 			cube_velocity,
+			cube_rotation_angle,
+			cube_rotation_axis,
 			x_bound,
 			y_bound,
 		}
@@ -261,6 +267,7 @@ impl crate::scene::Scene for BouncingCubeScene {
 	}
 
 	fn update(&mut self, dt: f32) {
+		self.cube_rotation_angle += std::f32::consts::FRAC_PI_4 * dt;
 		self.cube_position += self.cube_velocity * dt;
 		if self.cube_position.x < -self.x_bound + 0.1 {
 			self.cube_position.x = -self.x_bound + 0.1;
@@ -323,7 +330,13 @@ impl crate::scene::Scene for BouncingCubeScene {
 			0,
 			bytemuck::bytes_of(
 				&(self.camera.transformation
-					* glam::Mat4::from_translation(self.cube_position.into())),
+					* glam::Mat4::from_rotation_translation(
+						glam::Quat::from_axis_angle(
+							self.cube_rotation_axis.into(),
+							self.cube_rotation_angle,
+						),
+						self.cube_position.into(),
+					)),
 			),
 		);
 		render_pass.set_pipeline(&self.render_pipeline);
