@@ -1,7 +1,5 @@
+use crate::scene::bouncing_cube::BouncingCubeScene;
 use crate::scene::Scene;
-use crate::scene::{
-	bouncing_cube::BouncingCubeScene, hello_world_triangle::HelloWorldTriangleScene,
-};
 use winit::{
 	event::{Event, WindowEvent},
 	event_loop::{ControlFlow, EventLoop},

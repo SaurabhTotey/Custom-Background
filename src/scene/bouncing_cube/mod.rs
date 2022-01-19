@@ -194,14 +194,14 @@ impl BouncingCubeScene {
 			surface_configuration.width as f32 / surface_configuration.height as f32,
 		);
 		let mut rng = rand::thread_rng();
-		let y_bound = (camera.field_of_view / 2.0).tan();
+		let y_bound = (camera.field_of_view / 2.0).tan() * (-1.0 - camera.position.z);
 		let x_bound = y_bound * camera.aspect_ratio;
 		let cube_position = glam::Vec3A::new(
 			rng.gen_range(-x_bound + 0.1..x_bound - 0.1),
 			rng.gen_range(-y_bound + 0.1..y_bound - 0.1),
 			rng.gen_range(-0.9..0.9),
 		);
-		let cube_velocity = rng.gen::<glam::Vec3A>().normalize() * 2.0;
+		let cube_velocity = rng.gen::<glam::Vec3A>().normalize() * 1.5;
 		Self {
 			render_pipeline,
 			vertex_buffer,
