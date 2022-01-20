@@ -4,12 +4,13 @@ struct VertexInput {
 	[[location(2)]] color: vec3<f32>;
 };
 
-struct CubeTransformation {
+struct CubeUniform {
 	camera_transformation: mat4x4<f32>;
 	world_transformation: mat4x4<f32>;
+	ambient_light: vec3<f32>;
 };
 [[group(0), binding(0)]]
-var<uniform> transformations: CubeTransformation;
+var<uniform> cube_uniform: CubeUniform;
 
 struct FragmentInput {
 	[[builtin(position)]] position: vec4<f32>;
@@ -22,11 +23,12 @@ struct FragmentOutput {
 
 [[stage(vertex)]]
 fn vertex_stage(input: VertexInput) -> FragmentInput {
-	let new_position = transformations.camera_transformation * transformations.world_transformation * vec4<f32>(input.position.x, input.position.y, input.position.z, 1.0);
-	let new_normal = transformations.world_transformation * vec4<f32>(input.normal.x, input.normal.y, input.normal.z, 0.0);
+	let new_position = cube_uniform.camera_transformation * cube_uniform.world_transformation * vec4<f32>(input.position, 1.0);
+	let new_normal = cube_uniform.world_transformation * vec4<f32>(input.normal, 0.0);
+	let new_color = vec4<f32>(cube_uniform.ambient_light * input.color, 1.0);
 	return FragmentInput(
 		new_position,
-		vec4<f32>(input.color.x, input.color.y, input.color.z, 1.0),
+		new_color,
 	);
 }
 

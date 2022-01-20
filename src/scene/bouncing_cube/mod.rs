@@ -14,6 +14,7 @@ struct BouncingCubeVertex {
 struct BouncingCubeUniform {
 	camera_transformation: [[f32; 4]; 4],
 	world_transformation: [[f32; 4]; 4],
+	ambient_light: [f32; 4], // only use the first three components; fourth is for padding purposes
 }
 
 pub struct BouncingCubeScene {
@@ -367,6 +368,7 @@ impl crate::scene::Scene for BouncingCubeScene {
 				self.cube_position.into(),
 			)
 			.to_cols_array_2d(),
+			ambient_light: [0.1; 4],
 		};
 		queue.write_buffer(
 			&self.cube_transform_uniform_buffer,
