@@ -1,6 +1,17 @@
 use rand::Rng;
 use wgpu::util::DeviceExt;
 
+/**
+ * TODO:
+ *  * diffuse lighting
+ *  * have walls that represent where the cube is colliding and have lighting effect them too
+ *  * blinn-phong shading
+ *  * experiment with multiple lights
+ *  * texture cube with die faces
+ *  * make light move (maybe with time of day?)
+ *  * consider more accurate collisions (probably won't do this)
+ */
+
 #[repr(C)]
 #[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
 struct BouncingCubeVertex {
