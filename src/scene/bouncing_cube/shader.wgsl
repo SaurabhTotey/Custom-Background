@@ -17,6 +17,17 @@ struct FragmentInput {
 	[[location(1)]] color: vec4<f32>;
 };
 
+struct LightInformation {
+	position: vec3<f32>;
+	ambient_light: vec3<f32>;
+	diffuse_light: vec3<f32>;
+	constant_attenuation_term: f32;
+	linear_attenuation_term: f32;
+	quadratic_attenuation_term: f32;
+};
+[[group(1), binding(0)]]
+var<uniform> cube_light: LightInformation;
+
 struct FragmentOutput {
 	[[location(0)]] color: vec4<f32>;
 };
@@ -32,5 +43,5 @@ fn vertex_stage(input: VertexInput) -> FragmentInput {
 
 [[stage(fragment)]]
 fn fragment_stage(input: FragmentInput) -> FragmentOutput {
-	return FragmentOutput(input.color);
+	return FragmentOutput(vec4<f32>(cube_light.ambient_light, 1.0) * input.color);
 }

@@ -16,12 +16,27 @@ struct BouncingCubeTransformationUniform {
 	world_transformation: [[f32; 4]; 4],
 }
 
+#[repr(C)]
+#[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
+struct BouncingCubeLightingUniform {
+	position: [f32; 4], // only first three components are used; fourth component for padding
+	ambient_light: [f32; 4], // only first three components are used; fourth component for padding
+	diffuse_light: [f32; 4], // only first three components are used; fourth component for padding
+	constant_attenuation_term: f32,
+	linear_attenuation_term: f32,
+	quadratic_attenuation_term: f32,
+	_padding: f32,
+}
+
 pub struct BouncingCubeScene {
 	render_pipeline: wgpu::RenderPipeline,
 	vertex_buffer: wgpu::Buffer,
 	index_buffer: wgpu::Buffer,
 	cube_transform_uniform_buffer: wgpu::Buffer,
 	cube_transform_uniform_bind_group: wgpu::BindGroup,
+	cube_light: BouncingCubeLightingUniform,
+	cube_light_uniform_buffer: wgpu::Buffer,
+	cube_light_uniform_bind_group: wgpu::BindGroup,
 	depth_texture: crate::scene::utilities::texture::Texture,
 	camera: crate::scene::utilities::camera::Camera,
 	cube_position: glam::Vec3A,
@@ -205,6 +220,34 @@ impl BouncingCubeScene {
 					resource: cube_transform_uniform_buffer.as_entire_binding(),
 				}],
 			});
+		let cube_light_uniform_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+			label: Some("Bouncing cube scene cube light uniform buffer"),
+			size: std::mem::size_of::<BouncingCubeLightingUniform>() as wgpu::BufferAddress,
+			usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+			mapped_at_creation: false,
+		});
+		let cube_light_uniform_bind_group_layout =
+			device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+				label: Some("Bouncing cube scene cube light bind group layout"),
+				entries: &[wgpu::BindGroupLayoutEntry {
+					binding: 0,
+					visibility: wgpu::ShaderStages::FRAGMENT,
+					ty: wgpu::BindingType::Buffer {
+						ty: wgpu::BufferBindingType::Uniform,
+						has_dynamic_offset: false,
+						min_binding_size: None,
+					},
+					count: None,
+				}],
+			});
+		let cube_light_uniform_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+			label: Some("Bouncing cube scene cube light bind group"),
+			layout: &cube_light_uniform_bind_group_layout,
+			entries: &[wgpu::BindGroupEntry {
+				binding: 0,
+				resource: cube_light_uniform_buffer.as_entire_binding(),
+			}],
+		});
 		let depth_texture = crate::scene::utilities::texture::Texture::create_depth_texture(
 			device,
 			surface_configuration,
@@ -213,7 +256,10 @@ impl BouncingCubeScene {
 		let render_pipeline_layout =
 			device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
 				label: Some("Bouncing cube scene pipeline layout"),
-				bind_group_layouts: &[&cube_transform_uniform_bind_group_layout],
+				bind_group_layouts: &[
+					&cube_transform_uniform_bind_group_layout,
+					&cube_light_uniform_bind_group_layout,
+				],
 				push_constant_ranges: &[],
 			});
 		let render_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
@@ -263,12 +309,24 @@ impl BouncingCubeScene {
 		let cube_velocity = rng.gen::<glam::Vec3A>().normalize() * 1.5;
 		let cube_rotation_angle = rng.gen_range(0.0..2.0 * std::f32::consts::PI);
 		let cube_rotation_axis = rng.gen::<glam::Vec3A>().normalize();
+		let cube_light = BouncingCubeLightingUniform {
+			position: [x_bound, y_bound, -1.0, 1.0],
+			ambient_light: [0.1; 4],
+			diffuse_light: [0.0; 4],
+			constant_attenuation_term: 0.0,
+			linear_attenuation_term: 0.0,
+			quadratic_attenuation_term: 0.0,
+			_padding: 0.0,
+		};
 		Self {
 			render_pipeline,
 			vertex_buffer,
 			index_buffer,
 			cube_transform_uniform_buffer,
 			cube_transform_uniform_bind_group,
+			cube_light,
+			cube_light_uniform_buffer,
+			cube_light_uniform_bind_group,
 			depth_texture,
 			camera,
 			cube_position,
@@ -291,6 +349,7 @@ impl crate::scene::Scene for BouncingCubeScene {
 			surface_configuration.width as f32 / surface_configuration.height as f32;
 		self.camera.recalculate_transformation_and_view_planes();
 		self.x_bound = self.y_bound * self.camera.aspect_ratio;
+		self.cube_light.position[0] = self.x_bound;
 		self.depth_texture = crate::scene::utilities::texture::Texture::create_depth_texture(
 			device,
 			surface_configuration,
@@ -373,10 +432,16 @@ impl crate::scene::Scene for BouncingCubeScene {
 			0,
 			bytemuck::bytes_of(&bouncing_cube_uniform),
 		);
+		queue.write_buffer(
+			&self.cube_light_uniform_buffer,
+			0,
+			bytemuck::bytes_of(&self.cube_light),
+		);
 		render_pass.set_pipeline(&self.render_pipeline);
 		render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
 		render_pass.set_index_buffer(self.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
 		render_pass.set_bind_group(0, &self.cube_transform_uniform_bind_group, &[]);
+		render_pass.set_bind_group(1, &self.cube_light_uniform_bind_group, &[]);
 		render_pass.draw_indexed(0..36, 0, 0..1);
 	}
 }
