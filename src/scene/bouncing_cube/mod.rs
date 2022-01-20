@@ -5,7 +5,15 @@ use wgpu::util::DeviceExt;
 #[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
 struct BouncingCubeVertex {
 	position: [f32; 3],
+	normal: [f32; 3],
 	color: [f32; 3],
+}
+
+#[repr(C)]
+#[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
+struct BouncingCubeUniform {
+	camera_transformation: [[f32; 4]; 4],
+	world_transformation: [[f32; 4]; 4],
 }
 
 pub struct BouncingCubeScene {
@@ -33,103 +41,127 @@ impl BouncingCubeScene {
 				// back face
 				BouncingCubeVertex {
 					position: [-0.1, -0.1, -0.1],
+					normal: [0.0, 0.0, -1.0],
 					color: [1.0, 0.0, 0.0],
 				},
 				BouncingCubeVertex {
 					position: [0.1, -0.1, -0.1],
+					normal: [0.0, 0.0, -1.0],
 					color: [1.0, 0.0, 0.0],
 				},
 				BouncingCubeVertex {
 					position: [0.1, 0.1, -0.1],
+					normal: [0.0, 0.0, -1.0],
 					color: [1.0, 0.0, 0.0],
 				},
 				BouncingCubeVertex {
 					position: [-0.1, 0.1, -0.1],
+					normal: [0.0, 0.0, -1.0],
 					color: [1.0, 0.0, 0.0],
 				},
 				// front face
 				BouncingCubeVertex {
 					position: [-0.1, -0.1, 0.1],
+					normal: [0.0, 0.0, 1.0],
 					color: [1.0, 0.0, 0.0],
 				},
 				BouncingCubeVertex {
 					position: [0.1, -0.1, 0.1],
+					normal: [0.0, 0.0, 1.0],
 					color: [1.0, 0.0, 0.0],
 				},
 				BouncingCubeVertex {
 					position: [0.1, 0.1, 0.1],
+					normal: [0.0, 0.0, 1.0],
 					color: [1.0, 0.0, 0.0],
 				},
 				BouncingCubeVertex {
 					position: [-0.1, 0.1, 0.1],
+					normal: [0.0, 0.0, 1.0],
 					color: [1.0, 0.0, 0.0],
 				},
 				// left face
 				BouncingCubeVertex {
 					position: [-0.1, -0.1, -0.1],
+					normal: [-1.0, 0.0, 0.0],
 					color: [0.0, 1.0, 0.0],
 				},
 				BouncingCubeVertex {
 					position: [-0.1, -0.1, 0.1],
+					normal: [-1.0, 0.0, 0.0],
 					color: [0.0, 1.0, 0.0],
 				},
 				BouncingCubeVertex {
 					position: [-0.1, 0.1, 0.1],
+					normal: [-1.0, 0.0, 0.0],
 					color: [0.0, 1.0, 0.0],
 				},
 				BouncingCubeVertex {
 					position: [-0.1, 0.1, -0.1],
+					normal: [-1.0, 0.0, 0.0],
 					color: [0.0, 1.0, 0.0],
 				},
 				// right face
 				BouncingCubeVertex {
 					position: [0.1, -0.1, -0.1],
+					normal: [1.0, 0.0, 0.0],
 					color: [0.0, 1.0, 0.0],
 				},
 				BouncingCubeVertex {
 					position: [0.1, -0.1, 0.1],
+					normal: [1.0, 0.0, 0.0],
 					color: [0.0, 1.0, 0.0],
 				},
 				BouncingCubeVertex {
 					position: [0.1, 0.1, 0.1],
+					normal: [1.0, 0.0, 0.0],
 					color: [0.0, 1.0, 0.0],
 				},
 				BouncingCubeVertex {
 					position: [0.1, 0.1, -0.1],
+					normal: [1.0, 0.0, 0.0],
 					color: [0.0, 1.0, 0.0],
 				},
 				// bottom face
 				BouncingCubeVertex {
 					position: [-0.1, -0.1, 0.1],
+					normal: [0.0, -1.0, 0.0],
 					color: [0.0, 0.0, 1.0],
 				},
 				BouncingCubeVertex {
 					position: [0.1, -0.1, 0.1],
+					normal: [0.0, -1.0, 0.0],
 					color: [0.0, 0.0, 1.0],
 				},
 				BouncingCubeVertex {
 					position: [0.1, -0.1, -0.1],
+					normal: [0.0, -1.0, 0.0],
 					color: [0.0, 0.0, 1.0],
 				},
 				BouncingCubeVertex {
 					position: [-0.1, -0.1, -0.1],
+					normal: [0.0, -1.0, 0.0],
 					color: [0.0, 0.0, 1.0],
 				},
 				// top face
 				BouncingCubeVertex {
 					position: [-0.1, 0.1, 0.1],
+					normal: [0.0, 1.0, 0.0],
 					color: [0.0, 0.0, 1.0],
 				},
 				BouncingCubeVertex {
 					position: [0.1, 0.1, 0.1],
+					normal: [0.0, 1.0, 0.0],
 					color: [0.0, 0.0, 1.0],
 				},
 				BouncingCubeVertex {
 					position: [0.1, 0.1, -0.1],
+					normal: [0.0, 1.0, 0.0],
 					color: [0.0, 0.0, 1.0],
 				},
 				BouncingCubeVertex {
 					position: [-0.1, 0.1, -0.1],
+					normal: [0.0, 1.0, 0.0],
 					color: [0.0, 0.0, 1.0],
 				},
 			]),
@@ -146,7 +178,7 @@ impl BouncingCubeScene {
 		});
 		let cube_transform_uniform_buffer = device.create_buffer(&wgpu::BufferDescriptor {
 			label: Some("Bouncing cube scene cube transform uniform buffer"),
-			size: std::mem::size_of::<glam::Mat4>() as wgpu::BufferAddress,
+			size: std::mem::size_of::<BouncingCubeUniform>() as wgpu::BufferAddress,
 			usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
 			mapped_at_creation: false,
 		});
@@ -193,7 +225,7 @@ impl BouncingCubeScene {
 				buffers: &[wgpu::VertexBufferLayout {
 					array_stride: std::mem::size_of::<BouncingCubeVertex>() as wgpu::BufferAddress,
 					step_mode: wgpu::VertexStepMode::Vertex,
-					attributes: &wgpu::vertex_attr_array![0 => Float32x3, 1 => Float32x3],
+					attributes: &wgpu::vertex_attr_array![0 => Float32x3, 1 => Float32x3, 2 => Float32x3],
 				}],
 			},
 			fragment: Some(wgpu::FragmentState {
@@ -325,19 +357,21 @@ impl crate::scene::Scene for BouncingCubeScene {
 				stencil_ops: None,
 			}),
 		});
+		let bouncing_cube_uniform = BouncingCubeUniform {
+			camera_transformation: self.camera.transformation.to_cols_array_2d(),
+			world_transformation: glam::Mat4::from_rotation_translation(
+				glam::Quat::from_axis_angle(
+					self.cube_rotation_axis.into(),
+					self.cube_rotation_angle,
+				),
+				self.cube_position.into(),
+			)
+			.to_cols_array_2d(),
+		};
 		queue.write_buffer(
 			&self.cube_transform_uniform_buffer,
 			0,
-			bytemuck::bytes_of(
-				&(self.camera.transformation
-					* glam::Mat4::from_rotation_translation(
-						glam::Quat::from_axis_angle(
-							self.cube_rotation_axis.into(),
-							self.cube_rotation_angle,
-						),
-						self.cube_position.into(),
-					)),
-			),
+			bytemuck::bytes_of(&bouncing_cube_uniform),
 		);
 		render_pass.set_pipeline(&self.render_pipeline);
 		render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
