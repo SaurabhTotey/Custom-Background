@@ -69,7 +69,7 @@ impl DemoWindow {
 		// Configure the surface.
 		let surface_configuration = wgpu::SurfaceConfiguration {
 			usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
-			format: wgpu::TextureFormat::Bgra8Unorm,
+			format: surface.get_preferred_format(&adapter).unwrap(),
 			width: window.inner_size().width,
 			height: window.inner_size().height,
 			present_mode: wgpu::PresentMode::Fifo,
