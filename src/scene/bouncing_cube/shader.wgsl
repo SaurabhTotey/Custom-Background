@@ -49,8 +49,8 @@ fn fragment_stage(input: FragmentInput) -> FragmentOutput {
 	let position_to_light_vector = cube_light.position - input.world_position.xyz;
 	let light_distance = length(position_to_light_vector);
 	let light_direction = normalize(position_to_light_vector);
-	let diffuse_lighting = vec4<f32>(max(dot(light_direction, input.normal.xyz), 0.0) * cube_light.diffuse_light, 1.0);
-	let ambient_lighting = vec4<f32>(cube_light.ambient_light, 1.0);
-	let total_lighting = min(diffuse_lighting + ambient_lighting, vec4<f32>(1.0));
+	let diffuse_lighting = max(dot(light_direction, input.normal.xyz), 0.0) * cube_light.diffuse_light;
+	let attenuation = 1.0 / (cube_light.constant_attenuation_term + cube_light.linear_attenuation_term * light_distance+ cube_light.quadratic_attenuation_term * light_distance * light_distance);
+	let total_lighting = vec4<f32>(attenuation * min(diffuse_lighting + cube_light.ambient_light, vec3<f32>(1.0)), 1.0);
 	return FragmentOutput(total_lighting * input.color);
 }

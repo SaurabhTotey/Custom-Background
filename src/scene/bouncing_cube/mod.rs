@@ -320,12 +320,12 @@ impl BouncingCubeScene {
 		let cube_rotation_angle = rng.gen_range(0.0..2.0 * std::f32::consts::PI);
 		let cube_rotation_axis = rng.gen::<glam::Vec3A>().normalize();
 		let cube_light = BouncingCubeLightingUniform {
-			position: [x_bound, y_bound, -1.0, 1.0],
-			ambient_light: [0.1; 4],
+			position: [0.0, 0.0, -1.0, 1.0],
+			ambient_light: [0.05; 4],
 			diffuse_light: [1.0; 4],
-			constant_attenuation_term: 0.0,
-			linear_attenuation_term: 0.0,
-			quadratic_attenuation_term: 0.0,
+			constant_attenuation_term: 1.0,
+			linear_attenuation_term: 0.7,
+			quadratic_attenuation_term: 1.8,
 			_padding: 0.0,
 		};
 		Self {
@@ -359,7 +359,6 @@ impl crate::scene::Scene for BouncingCubeScene {
 			surface_configuration.width as f32 / surface_configuration.height as f32;
 		self.camera.recalculate_transformation_and_view_planes();
 		self.x_bound = self.y_bound * self.camera.aspect_ratio;
-		self.cube_light.position[0] = self.x_bound;
 		self.depth_texture = crate::scene::utilities::texture::Texture::create_depth_texture(
 			device,
 			surface_configuration,
