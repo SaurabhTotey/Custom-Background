@@ -3,7 +3,8 @@ use wgpu::util::DeviceExt;
 
 /**
  * TODO:
- *  * have walls that represent where the cube is colliding and have lighting effect them too
+ *  * more accurate collisions
+ *  * optimize when buffers are being written to so it doesn't happen every frame
  *  * cube shadows on wall
  *  * blinn-phong lighting
  *  * texture cube with die faces
@@ -383,34 +384,133 @@ impl BouncingCubeScene {
 	 * need to be transformed.
 	 */
 	fn get_wall_vertices_for_bounds(x_bound: f32, y_bound: f32) -> Vec<BouncingCubeVertex> {
-		return vec![
+		vec![
 			// back wall
 			BouncingCubeVertex {
 				position: [-x_bound, -y_bound, 1.0],
-				normal: [0.0, 0.0, 1.0],
+				normal: [0.0, 0.0, -1.0],
 				color: [0.5, 0.5, 0.5],
 				needs_world_transform: 0,
 			},
 			BouncingCubeVertex {
 				position: [x_bound, -y_bound, 1.0],
-				normal: [0.0, 0.0, 1.0],
+				normal: [0.0, 0.0, -1.0],
 				color: [0.5, 0.5, 0.5],
 				needs_world_transform: 0,
 			},
 			BouncingCubeVertex {
 				position: [x_bound, y_bound, 1.0],
-				normal: [0.0, 0.0, 1.0],
+				normal: [0.0, 0.0, -1.0],
 				color: [0.5, 0.5, 0.5],
 				needs_world_transform: 0,
 			},
 			BouncingCubeVertex {
 				position: [-x_bound, y_bound, 1.0],
-				normal: [0.0, 0.0, 1.0],
+				normal: [0.0, 0.0, -1.0],
 				color: [0.5, 0.5, 0.5],
 				needs_world_transform: 0,
 			},
-			// TODO: remainder of walls
-		];
+			// left wall
+			BouncingCubeVertex {
+				position: [-x_bound, -y_bound, 1.0],
+				normal: [1.0, 0.0, 0.0],
+				color: [0.5, 0.5, 0.5],
+				needs_world_transform: 0,
+			},
+			BouncingCubeVertex {
+				position: [-x_bound, -y_bound, -1.0],
+				normal: [1.0, 0.0, 0.0],
+				color: [0.5, 0.5, 0.5],
+				needs_world_transform: 0,
+			},
+			BouncingCubeVertex {
+				position: [-x_bound, y_bound, -1.0],
+				normal: [1.0, 0.0, 0.0],
+				color: [0.5, 0.5, 0.5],
+				needs_world_transform: 0,
+			},
+			BouncingCubeVertex {
+				position: [-x_bound, y_bound, 1.0],
+				normal: [1.0, 0.0, 0.0],
+				color: [0.5, 0.5, 0.5],
+				needs_world_transform: 0,
+			},
+			// right wall
+			BouncingCubeVertex {
+				position: [x_bound, -y_bound, 1.0],
+				normal: [-1.0, 0.0, 0.0],
+				color: [0.5, 0.5, 0.5],
+				needs_world_transform: 0,
+			},
+			BouncingCubeVertex {
+				position: [x_bound, -y_bound, -1.0],
+				normal: [-1.0, 0.0, 0.0],
+				color: [0.5, 0.5, 0.5],
+				needs_world_transform: 0,
+			},
+			BouncingCubeVertex {
+				position: [x_bound, y_bound, -1.0],
+				normal: [-1.0, 0.0, 0.0],
+				color: [0.5, 0.5, 0.5],
+				needs_world_transform: 0,
+			},
+			BouncingCubeVertex {
+				position: [x_bound, y_bound, 1.0],
+				normal: [-1.0, 0.0, 0.0],
+				color: [0.5, 0.5, 0.5],
+				needs_world_transform: 0,
+			},
+			// top wall
+			BouncingCubeVertex {
+				position: [-x_bound, -y_bound, -1.0],
+				normal: [0.0, 1.0, 0.0],
+				color: [0.5, 0.5, 0.5],
+				needs_world_transform: 0,
+			},
+			BouncingCubeVertex {
+				position: [x_bound, -y_bound, -1.0],
+				normal: [0.0, 1.0, 0.0],
+				color: [0.5, 0.5, 0.5],
+				needs_world_transform: 0,
+			},
+			BouncingCubeVertex {
+				position: [x_bound, -y_bound, 1.0],
+				normal: [0.0, 1.0, 0.0],
+				color: [0.5, 0.5, 0.5],
+				needs_world_transform: 0,
+			},
+			BouncingCubeVertex {
+				position: [-x_bound, -y_bound, 1.0],
+				normal: [0.0, 1.0, 0.0],
+				color: [0.5, 0.5, 0.5],
+				needs_world_transform: 0,
+			},
+			// bottom wall
+			BouncingCubeVertex {
+				position: [-x_bound, y_bound, -1.0],
+				normal: [0.0, -1.0, 0.0],
+				color: [0.5, 0.5, 0.5],
+				needs_world_transform: 0,
+			},
+			BouncingCubeVertex {
+				position: [x_bound, y_bound, -1.0],
+				normal: [0.0, -1.0, 0.0],
+				color: [0.5, 0.5, 0.5],
+				needs_world_transform: 0,
+			},
+			BouncingCubeVertex {
+				position: [x_bound, y_bound, 1.0],
+				normal: [0.0, -1.0, 0.0],
+				color: [0.5, 0.5, 0.5],
+				needs_world_transform: 0,
+			},
+			BouncingCubeVertex {
+				position: [-x_bound, y_bound, 1.0],
+				normal: [0.0, -1.0, 0.0],
+				color: [0.5, 0.5, 0.5],
+				needs_world_transform: 0,
+			},
+		]
 	}
 }
 
