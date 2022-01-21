@@ -37,13 +37,15 @@ struct FragmentOutput {
 [[stage(vertex)]]
 fn vertex_stage(input: VertexInput) -> FragmentInput {
 	var world_position: vec4<f32> = vec4<f32>(input.position, 1.0);
+	var world_normal: vec4<f32> = vec4<f32>(input.normal, 0.0);
 	if (bool(input.needs_world_transform)) {
 		world_position = cube_transform.world_transformation * vec4<f32>(input.position, 1.0);
+		world_normal = cube_transform.world_transformation * vec4<f32>(input.normal, 0.0);
 	}
 	return FragmentInput(
 		cube_transform.camera_transformation * world_position,
 		world_position,
-		cube_transform.world_transformation * vec4<f32>(input.normal, 0.0),
+		world_normal,
 		vec4<f32>(input.color, 1.0),
 	);
 }

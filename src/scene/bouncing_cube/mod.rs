@@ -39,6 +39,7 @@ struct BouncingCubeLightingUniform {
 
 pub struct BouncingCubeScene {
 	render_pipeline: wgpu::RenderPipeline,
+	wall_vertices: Vec<BouncingCubeVertex>,
 	vertex_buffer: wgpu::Buffer,
 	index_buffer: wgpu::Buffer,
 	cube_transform_uniform_buffer: wgpu::Buffer,
@@ -59,166 +60,16 @@ pub struct BouncingCubeScene {
 impl BouncingCubeScene {
 	pub fn new(device: &wgpu::Device, surface_configuration: &wgpu::SurfaceConfiguration) -> Self {
 		let shader_module = device.create_shader_module(&wgpu::include_wgsl!("shader.wgsl"));
-		let vertex_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+		let vertex_buffer = device.create_buffer(&wgpu::BufferDescriptor {
 			label: Some("Bouncing cube scene vertex buffer"),
-			contents: bytemuck::cast_slice(&[
-				// back face
-				BouncingCubeVertex {
-					position: [-0.1, -0.1, -0.1],
-					normal: [0.0, 0.0, -1.0],
-					color: [1.0, 0.0, 0.0],
-					needs_world_transform: 1,
-				},
-				BouncingCubeVertex {
-					position: [0.1, -0.1, -0.1],
-					normal: [0.0, 0.0, -1.0],
-					color: [1.0, 0.0, 0.0],
-					needs_world_transform: 1,
-				},
-				BouncingCubeVertex {
-					position: [0.1, 0.1, -0.1],
-					normal: [0.0, 0.0, -1.0],
-					color: [1.0, 0.0, 0.0],
-					needs_world_transform: 1,
-				},
-				BouncingCubeVertex {
-					position: [-0.1, 0.1, -0.1],
-					normal: [0.0, 0.0, -1.0],
-					color: [1.0, 0.0, 0.0],
-					needs_world_transform: 1,
-				},
-				// front face
-				BouncingCubeVertex {
-					position: [-0.1, -0.1, 0.1],
-					normal: [0.0, 0.0, 1.0],
-					color: [1.0, 0.0, 0.0],
-					needs_world_transform: 1,
-				},
-				BouncingCubeVertex {
-					position: [0.1, -0.1, 0.1],
-					normal: [0.0, 0.0, 1.0],
-					color: [1.0, 0.0, 0.0],
-					needs_world_transform: 1,
-				},
-				BouncingCubeVertex {
-					position: [0.1, 0.1, 0.1],
-					normal: [0.0, 0.0, 1.0],
-					color: [1.0, 0.0, 0.0],
-					needs_world_transform: 1,
-				},
-				BouncingCubeVertex {
-					position: [-0.1, 0.1, 0.1],
-					normal: [0.0, 0.0, 1.0],
-					color: [1.0, 0.0, 0.0],
-					needs_world_transform: 1,
-				},
-				// left face
-				BouncingCubeVertex {
-					position: [-0.1, -0.1, -0.1],
-					normal: [-1.0, 0.0, 0.0],
-					color: [0.0, 1.0, 0.0],
-					needs_world_transform: 1,
-				},
-				BouncingCubeVertex {
-					position: [-0.1, -0.1, 0.1],
-					normal: [-1.0, 0.0, 0.0],
-					color: [0.0, 1.0, 0.0],
-					needs_world_transform: 1,
-				},
-				BouncingCubeVertex {
-					position: [-0.1, 0.1, 0.1],
-					normal: [-1.0, 0.0, 0.0],
-					color: [0.0, 1.0, 0.0],
-					needs_world_transform: 1,
-				},
-				BouncingCubeVertex {
-					position: [-0.1, 0.1, -0.1],
-					normal: [-1.0, 0.0, 0.0],
-					color: [0.0, 1.0, 0.0],
-					needs_world_transform: 1,
-				},
-				// right face
-				BouncingCubeVertex {
-					position: [0.1, -0.1, -0.1],
-					normal: [1.0, 0.0, 0.0],
-					color: [0.0, 1.0, 0.0],
-					needs_world_transform: 1,
-				},
-				BouncingCubeVertex {
-					position: [0.1, -0.1, 0.1],
-					normal: [1.0, 0.0, 0.0],
-					color: [0.0, 1.0, 0.0],
-					needs_world_transform: 1,
-				},
-				BouncingCubeVertex {
-					position: [0.1, 0.1, 0.1],
-					normal: [1.0, 0.0, 0.0],
-					color: [0.0, 1.0, 0.0],
-					needs_world_transform: 1,
-				},
-				BouncingCubeVertex {
-					position: [0.1, 0.1, -0.1],
-					normal: [1.0, 0.0, 0.0],
-					color: [0.0, 1.0, 0.0],
-					needs_world_transform: 1,
-				},
-				// bottom face
-				BouncingCubeVertex {
-					position: [-0.1, -0.1, 0.1],
-					normal: [0.0, -1.0, 0.0],
-					color: [0.0, 0.0, 1.0],
-					needs_world_transform: 1,
-				},
-				BouncingCubeVertex {
-					position: [0.1, -0.1, 0.1],
-					normal: [0.0, -1.0, 0.0],
-					color: [0.0, 0.0, 1.0],
-					needs_world_transform: 1,
-				},
-				BouncingCubeVertex {
-					position: [0.1, -0.1, -0.1],
-					normal: [0.0, -1.0, 0.0],
-					color: [0.0, 0.0, 1.0],
-					needs_world_transform: 1,
-				},
-				BouncingCubeVertex {
-					position: [-0.1, -0.1, -0.1],
-					normal: [0.0, -1.0, 0.0],
-					color: [0.0, 0.0, 1.0],
-					needs_world_transform: 1,
-				},
-				// top face
-				BouncingCubeVertex {
-					position: [-0.1, 0.1, 0.1],
-					normal: [0.0, 1.0, 0.0],
-					color: [0.0, 0.0, 1.0],
-					needs_world_transform: 1,
-				},
-				BouncingCubeVertex {
-					position: [0.1, 0.1, 0.1],
-					normal: [0.0, 1.0, 0.0],
-					color: [0.0, 0.0, 1.0],
-					needs_world_transform: 1,
-				},
-				BouncingCubeVertex {
-					position: [0.1, 0.1, -0.1],
-					normal: [0.0, 1.0, 0.0],
-					color: [0.0, 0.0, 1.0],
-					needs_world_transform: 1,
-				},
-				BouncingCubeVertex {
-					position: [-0.1, 0.1, -0.1],
-					normal: [0.0, 1.0, 0.0],
-					color: [0.0, 0.0, 1.0],
-					needs_world_transform: 1,
-				},
-			]),
-			usage: wgpu::BufferUsages::VERTEX,
+			size: std::mem::size_of::<BouncingCubeVertex>() as wgpu::BufferAddress * 44, // 24 for the cube, 20 for the walls
+			usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
+			mapped_at_creation: false,
 		});
 		let index_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
 			label: Some("Bouncing cube scene index buffer"),
 			contents: bytemuck::cast_slice(
-				&(0..6)
+				&(0..11) // 6 cube faces and 5 walls
 					.flat_map(|face| [0u16, 1, 2, 0, 2, 3].iter().map(move |i| face * 4 + i))
 					.collect::<Vec<_>>(),
 			),
@@ -334,6 +185,7 @@ impl BouncingCubeScene {
 		let mut rng = rand::thread_rng();
 		let y_bound = (camera.field_of_view / 2.0).tan() * (-1.0 - camera.position.z);
 		let x_bound = y_bound * camera.aspect_ratio;
+		let wall_vertices = Self::get_wall_vertices_for_bounds(x_bound, y_bound);
 		let cube_position = glam::Vec3A::new(
 			rng.gen_range(-x_bound + 0.1..x_bound - 0.1),
 			rng.gen_range(-y_bound + 0.1..y_bound - 0.1),
@@ -353,6 +205,7 @@ impl BouncingCubeScene {
 		};
 		Self {
 			render_pipeline,
+			wall_vertices,
 			vertex_buffer,
 			index_buffer,
 			cube_transform_uniform_buffer,
@@ -370,6 +223,195 @@ impl BouncingCubeScene {
 			y_bound,
 		}
 	}
+
+	// Vertices for the cube in its own reference frame: all need to be transformed into world coordinates.
+	const CUBE_VERTICES: [BouncingCubeVertex; 24] = [
+		// back face
+		BouncingCubeVertex {
+			position: [-0.1, -0.1, -0.1],
+			normal: [0.0, 0.0, -1.0],
+			color: [1.0, 0.0, 0.0],
+			needs_world_transform: 1,
+		},
+		BouncingCubeVertex {
+			position: [0.1, -0.1, -0.1],
+			normal: [0.0, 0.0, -1.0],
+			color: [1.0, 0.0, 0.0],
+			needs_world_transform: 1,
+		},
+		BouncingCubeVertex {
+			position: [0.1, 0.1, -0.1],
+			normal: [0.0, 0.0, -1.0],
+			color: [1.0, 0.0, 0.0],
+			needs_world_transform: 1,
+		},
+		BouncingCubeVertex {
+			position: [-0.1, 0.1, -0.1],
+			normal: [0.0, 0.0, -1.0],
+			color: [1.0, 0.0, 0.0],
+			needs_world_transform: 1,
+		},
+		// front face
+		BouncingCubeVertex {
+			position: [-0.1, -0.1, 0.1],
+			normal: [0.0, 0.0, 1.0],
+			color: [1.0, 0.0, 0.0],
+			needs_world_transform: 1,
+		},
+		BouncingCubeVertex {
+			position: [0.1, -0.1, 0.1],
+			normal: [0.0, 0.0, 1.0],
+			color: [1.0, 0.0, 0.0],
+			needs_world_transform: 1,
+		},
+		BouncingCubeVertex {
+			position: [0.1, 0.1, 0.1],
+			normal: [0.0, 0.0, 1.0],
+			color: [1.0, 0.0, 0.0],
+			needs_world_transform: 1,
+		},
+		BouncingCubeVertex {
+			position: [-0.1, 0.1, 0.1],
+			normal: [0.0, 0.0, 1.0],
+			color: [1.0, 0.0, 0.0],
+			needs_world_transform: 1,
+		},
+		// left face
+		BouncingCubeVertex {
+			position: [-0.1, -0.1, -0.1],
+			normal: [-1.0, 0.0, 0.0],
+			color: [0.0, 1.0, 0.0],
+			needs_world_transform: 1,
+		},
+		BouncingCubeVertex {
+			position: [-0.1, -0.1, 0.1],
+			normal: [-1.0, 0.0, 0.0],
+			color: [0.0, 1.0, 0.0],
+			needs_world_transform: 1,
+		},
+		BouncingCubeVertex {
+			position: [-0.1, 0.1, 0.1],
+			normal: [-1.0, 0.0, 0.0],
+			color: [0.0, 1.0, 0.0],
+			needs_world_transform: 1,
+		},
+		BouncingCubeVertex {
+			position: [-0.1, 0.1, -0.1],
+			normal: [-1.0, 0.0, 0.0],
+			color: [0.0, 1.0, 0.0],
+			needs_world_transform: 1,
+		},
+		// right face
+		BouncingCubeVertex {
+			position: [0.1, -0.1, -0.1],
+			normal: [1.0, 0.0, 0.0],
+			color: [0.0, 1.0, 0.0],
+			needs_world_transform: 1,
+		},
+		BouncingCubeVertex {
+			position: [0.1, -0.1, 0.1],
+			normal: [1.0, 0.0, 0.0],
+			color: [0.0, 1.0, 0.0],
+			needs_world_transform: 1,
+		},
+		BouncingCubeVertex {
+			position: [0.1, 0.1, 0.1],
+			normal: [1.0, 0.0, 0.0],
+			color: [0.0, 1.0, 0.0],
+			needs_world_transform: 1,
+		},
+		BouncingCubeVertex {
+			position: [0.1, 0.1, -0.1],
+			normal: [1.0, 0.0, 0.0],
+			color: [0.0, 1.0, 0.0],
+			needs_world_transform: 1,
+		},
+		// bottom face
+		BouncingCubeVertex {
+			position: [-0.1, -0.1, 0.1],
+			normal: [0.0, -1.0, 0.0],
+			color: [0.0, 0.0, 1.0],
+			needs_world_transform: 1,
+		},
+		BouncingCubeVertex {
+			position: [0.1, -0.1, 0.1],
+			normal: [0.0, -1.0, 0.0],
+			color: [0.0, 0.0, 1.0],
+			needs_world_transform: 1,
+		},
+		BouncingCubeVertex {
+			position: [0.1, -0.1, -0.1],
+			normal: [0.0, -1.0, 0.0],
+			color: [0.0, 0.0, 1.0],
+			needs_world_transform: 1,
+		},
+		BouncingCubeVertex {
+			position: [-0.1, -0.1, -0.1],
+			normal: [0.0, -1.0, 0.0],
+			color: [0.0, 0.0, 1.0],
+			needs_world_transform: 1,
+		},
+		// top face
+		BouncingCubeVertex {
+			position: [-0.1, 0.1, 0.1],
+			normal: [0.0, 1.0, 0.0],
+			color: [0.0, 0.0, 1.0],
+			needs_world_transform: 1,
+		},
+		BouncingCubeVertex {
+			position: [0.1, 0.1, 0.1],
+			normal: [0.0, 1.0, 0.0],
+			color: [0.0, 0.0, 1.0],
+			needs_world_transform: 1,
+		},
+		BouncingCubeVertex {
+			position: [0.1, 0.1, -0.1],
+			normal: [0.0, 1.0, 0.0],
+			color: [0.0, 0.0, 1.0],
+			needs_world_transform: 1,
+		},
+		BouncingCubeVertex {
+			position: [-0.1, 0.1, -0.1],
+			normal: [0.0, 1.0, 0.0],
+			color: [0.0, 0.0, 1.0],
+			needs_world_transform: 1,
+		},
+	];
+
+	/**
+	 * Get the vertices for the walls on which the cube is bouncing. Vertices are in world space and therefore do not
+	 * need to be transformed.
+	 */
+	fn get_wall_vertices_for_bounds(x_bound: f32, y_bound: f32) -> Vec<BouncingCubeVertex> {
+		return vec![
+			// back wall
+			BouncingCubeVertex {
+				position: [-x_bound, -y_bound, 1.0],
+				normal: [0.0, 0.0, 1.0],
+				color: [0.5, 0.5, 0.5],
+				needs_world_transform: 0,
+			},
+			BouncingCubeVertex {
+				position: [x_bound, -y_bound, 1.0],
+				normal: [0.0, 0.0, 1.0],
+				color: [0.5, 0.5, 0.5],
+				needs_world_transform: 0,
+			},
+			BouncingCubeVertex {
+				position: [x_bound, y_bound, 1.0],
+				normal: [0.0, 0.0, 1.0],
+				color: [0.5, 0.5, 0.5],
+				needs_world_transform: 0,
+			},
+			BouncingCubeVertex {
+				position: [-x_bound, y_bound, 1.0],
+				normal: [0.0, 0.0, 1.0],
+				color: [0.5, 0.5, 0.5],
+				needs_world_transform: 0,
+			},
+			// TODO: remainder of walls
+		];
+	}
 }
 
 impl crate::scene::Scene for BouncingCubeScene {
@@ -382,6 +424,7 @@ impl crate::scene::Scene for BouncingCubeScene {
 			surface_configuration.width as f32 / surface_configuration.height as f32;
 		self.camera.recalculate_transformation_and_view_planes();
 		self.x_bound = self.y_bound * self.camera.aspect_ratio;
+		self.wall_vertices = Self::get_wall_vertices_for_bounds(self.x_bound, self.y_bound);
 		self.depth_texture = crate::scene::utilities::texture::Texture::create_depth_texture(
 			device,
 			surface_configuration,
@@ -460,6 +503,16 @@ impl crate::scene::Scene for BouncingCubeScene {
 			.to_cols_array_2d(),
 		};
 		queue.write_buffer(
+			&self.vertex_buffer,
+			0,
+			bytemuck::cast_slice(
+				&Self::CUBE_VERTICES
+					.into_iter()
+					.chain(self.wall_vertices.clone().into_iter())
+					.collect::<Vec<_>>(),
+			),
+		);
+		queue.write_buffer(
 			&self.cube_transform_uniform_buffer,
 			0,
 			bytemuck::bytes_of(&bouncing_cube_uniform),
@@ -474,6 +527,6 @@ impl crate::scene::Scene for BouncingCubeScene {
 		render_pass.set_index_buffer(self.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
 		render_pass.set_bind_group(0, &self.cube_transform_uniform_bind_group, &[]);
 		render_pass.set_bind_group(1, &self.cube_light_uniform_bind_group, &[]);
-		render_pass.draw_indexed(0..36, 0, 0..1);
+		render_pass.draw_indexed(0..36 + 6 * self.wall_vertices.len() as u32 / 4, 0, 0..1);
 	}
 }
