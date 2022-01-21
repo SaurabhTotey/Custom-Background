@@ -4,11 +4,9 @@ use wgpu::util::DeviceExt;
 /**
  * TODO:
  *  * have walls that represent where the cube is colliding and have lighting effect them too
- *  * blinn-phong shading
- *  * experiment with multiple lights
+ *  * cube shadows on wall
+ *  * blinn-phong lighting
  *  * texture cube with die faces
- *  * make light move (maybe with time of day?)
- *  * consider more accurate collisions (probably won't do this)
  */
 
 #[repr(C)]
