@@ -12,9 +12,10 @@ struct CubeTransform {
 var<uniform> cube_transform: CubeTransform;
 
 struct FragmentInput {
-	[[builtin(position)]] position: vec4<f32>;
-	[[location(0)]] normal: vec4<f32>;
-	[[location(1)]] color: vec4<f32>;
+	[[builtin(position)]] clip_position: vec4<f32>;
+	[[location(0)]] world_position: vec4<f32>;
+	[[location(1)]] normal: vec4<f32>;
+	[[location(2)]] color: vec4<f32>;
 };
 
 struct LightInformation {
@@ -34,8 +35,10 @@ struct FragmentOutput {
 
 [[stage(vertex)]]
 fn vertex_stage(input: VertexInput) -> FragmentInput {
+	let world_position = cube_transform.world_transformation * vec4<f32>(input.position, 1.0);
 	return FragmentInput(
-		cube_transform.camera_transformation * cube_transform.world_transformation * vec4<f32>(input.position, 1.0),
+		cube_transform.camera_transformation * world_position,
+		world_position,
 		cube_transform.world_transformation * vec4<f32>(input.normal, 0.0),
 		vec4<f32>(input.color, 1.0),
 	);
@@ -43,5 +46,11 @@ fn vertex_stage(input: VertexInput) -> FragmentInput {
 
 [[stage(fragment)]]
 fn fragment_stage(input: FragmentInput) -> FragmentOutput {
-	return FragmentOutput(vec4<f32>(cube_light.ambient_light, 1.0) * input.color);
+	let position_to_light_vector = cube_light.position - input.world_position.xyz;
+	let light_distance = length(position_to_light_vector);
+	let light_direction = normalize(position_to_light_vector);
+	let diffuse_lighting = vec4<f32>(max(dot(light_direction, input.normal.xyz), 0.0) * cube_light.diffuse_light, 1.0);
+	let ambient_lighting = vec4<f32>(cube_light.ambient_light, 1.0);
+	let total_lighting = min(diffuse_lighting + ambient_lighting, vec4<f32>(1.0));
+	return FragmentOutput(total_lighting * input.color);
 }

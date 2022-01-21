@@ -3,7 +3,6 @@ use wgpu::util::DeviceExt;
 
 /**
  * TODO:
- *  * diffuse lighting
  *  * have walls that represent where the cube is colliding and have lighting effect them too
  *  * blinn-phong shading
  *  * experiment with multiple lights
@@ -323,7 +322,7 @@ impl BouncingCubeScene {
 		let cube_light = BouncingCubeLightingUniform {
 			position: [x_bound, y_bound, -1.0, 1.0],
 			ambient_light: [0.1; 4],
-			diffuse_light: [0.0; 4],
+			diffuse_light: [1.0; 4],
 			constant_attenuation_term: 0.0,
 			linear_attenuation_term: 0.0,
 			quadratic_attenuation_term: 0.0,
