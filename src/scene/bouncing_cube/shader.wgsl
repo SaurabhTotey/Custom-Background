@@ -2,12 +2,10 @@ struct VertexInput {
 	[[location(0)]] position: vec3<f32>;
 	[[location(1)]] normal: vec3<f32>;
 	[[location(2)]] color: vec3<f32>;
-	[[location(3)]] needs_world_transform: i32;
 };
 
 struct CubeTransform {
 	camera_transformation: mat4x4<f32>;
-	world_transformation: mat4x4<f32>;
 };
 [[group(0), binding(0)]]
 var<uniform> cube_transform: CubeTransform;
@@ -36,16 +34,10 @@ struct FragmentOutput {
 
 [[stage(vertex)]]
 fn vertex_stage(input: VertexInput) -> FragmentInput {
-	var world_position: vec4<f32> = vec4<f32>(input.position, 1.0);
-	var world_normal: vec4<f32> = vec4<f32>(input.normal, 0.0);
-	if (bool(input.needs_world_transform)) {
-		world_position = cube_transform.world_transformation * vec4<f32>(input.position, 1.0);
-		world_normal = cube_transform.world_transformation * vec4<f32>(input.normal, 0.0);
-	}
 	return FragmentInput(
-		cube_transform.camera_transformation * world_position,
-		world_position,
-		world_normal,
+		cube_transform.camera_transformation * vec4<f32>(input.position, 1.0),
+		vec4<f32>(input.position, 1.0),
+		vec4<f32>(input.normal, 0.0),
 		vec4<f32>(input.color, 1.0),
 	);
 }

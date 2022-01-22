@@ -3,11 +3,9 @@ use wgpu::util::DeviceExt;
 
 /**
  * TODO:
- *  * more accurate collisions
  *  * optimize when buffers are being written to so it doesn't happen every frame
  *  * cube shadows on wall
  *  * blinn-phong lighting
- *  * texture cube with die faces
  */
 
 #[repr(C)]
@@ -16,14 +14,12 @@ struct BouncingCubeVertex {
 	position: [f32; 3],
 	normal: [f32; 3],
 	color: [f32; 3],
-	needs_world_transform: i32,
 }
 
 #[repr(C)]
 #[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
 struct BouncingCubeTransformationUniform {
 	camera_transformation: [[f32; 4]; 4],
-	world_transformation: [[f32; 4]; 4],
 }
 
 #[repr(C)]
@@ -40,6 +36,7 @@ struct BouncingCubeLightingUniform {
 
 pub struct BouncingCubeScene {
 	render_pipeline: wgpu::RenderPipeline,
+	cube_vertices: Vec<BouncingCubeVertex>,
 	wall_vertices: Vec<BouncingCubeVertex>,
 	vertex_buffer: wgpu::Buffer,
 	index_buffer: wgpu::Buffer,
@@ -156,7 +153,7 @@ impl BouncingCubeScene {
 				buffers: &[wgpu::VertexBufferLayout {
 					array_stride: std::mem::size_of::<BouncingCubeVertex>() as wgpu::BufferAddress,
 					step_mode: wgpu::VertexStepMode::Vertex,
-					attributes: &wgpu::vertex_attr_array![0 => Float32x3, 1 => Float32x3, 2 => Float32x3, 3 => Sint32],
+					attributes: &wgpu::vertex_attr_array![0 => Float32x3, 1 => Float32x3, 2 => Float32x3],
 				}],
 			},
 			fragment: Some(wgpu::FragmentState {
@@ -186,6 +183,7 @@ impl BouncingCubeScene {
 		let mut rng = rand::thread_rng();
 		let y_bound = (camera.field_of_view / 2.0).tan() * (-1.0 - camera.position.z);
 		let x_bound = y_bound * camera.aspect_ratio;
+		let cube_vertices = Self::CUBE_VERTICES.to_vec();
 		let wall_vertices = Self::get_wall_vertices_for_bounds(x_bound, y_bound);
 		let cube_position = glam::Vec3A::new(
 			rng.gen_range(-x_bound + 0.1..x_bound - 0.1),
@@ -206,6 +204,7 @@ impl BouncingCubeScene {
 		};
 		Self {
 			render_pipeline,
+			cube_vertices,
 			wall_vertices,
 			vertex_buffer,
 			index_buffer,
@@ -232,150 +231,126 @@ impl BouncingCubeScene {
 			position: [-0.1, -0.1, -0.1],
 			normal: [0.0, 0.0, -1.0],
 			color: [1.0, 0.0, 0.0],
-			needs_world_transform: 1,
 		},
 		BouncingCubeVertex {
 			position: [0.1, -0.1, -0.1],
 			normal: [0.0, 0.0, -1.0],
 			color: [1.0, 0.0, 0.0],
-			needs_world_transform: 1,
 		},
 		BouncingCubeVertex {
 			position: [0.1, 0.1, -0.1],
 			normal: [0.0, 0.0, -1.0],
 			color: [1.0, 0.0, 0.0],
-			needs_world_transform: 1,
 		},
 		BouncingCubeVertex {
 			position: [-0.1, 0.1, -0.1],
 			normal: [0.0, 0.0, -1.0],
 			color: [1.0, 0.0, 0.0],
-			needs_world_transform: 1,
 		},
 		// front face
 		BouncingCubeVertex {
 			position: [-0.1, -0.1, 0.1],
 			normal: [0.0, 0.0, 1.0],
 			color: [1.0, 0.0, 0.0],
-			needs_world_transform: 1,
 		},
 		BouncingCubeVertex {
 			position: [0.1, -0.1, 0.1],
 			normal: [0.0, 0.0, 1.0],
 			color: [1.0, 0.0, 0.0],
-			needs_world_transform: 1,
 		},
 		BouncingCubeVertex {
 			position: [0.1, 0.1, 0.1],
 			normal: [0.0, 0.0, 1.0],
 			color: [1.0, 0.0, 0.0],
-			needs_world_transform: 1,
 		},
 		BouncingCubeVertex {
 			position: [-0.1, 0.1, 0.1],
 			normal: [0.0, 0.0, 1.0],
 			color: [1.0, 0.0, 0.0],
-			needs_world_transform: 1,
 		},
 		// left face
 		BouncingCubeVertex {
 			position: [-0.1, -0.1, -0.1],
 			normal: [-1.0, 0.0, 0.0],
 			color: [0.0, 1.0, 0.0],
-			needs_world_transform: 1,
 		},
 		BouncingCubeVertex {
 			position: [-0.1, -0.1, 0.1],
 			normal: [-1.0, 0.0, 0.0],
 			color: [0.0, 1.0, 0.0],
-			needs_world_transform: 1,
 		},
 		BouncingCubeVertex {
 			position: [-0.1, 0.1, 0.1],
 			normal: [-1.0, 0.0, 0.0],
 			color: [0.0, 1.0, 0.0],
-			needs_world_transform: 1,
 		},
 		BouncingCubeVertex {
 			position: [-0.1, 0.1, -0.1],
 			normal: [-1.0, 0.0, 0.0],
 			color: [0.0, 1.0, 0.0],
-			needs_world_transform: 1,
 		},
 		// right face
 		BouncingCubeVertex {
 			position: [0.1, -0.1, -0.1],
 			normal: [1.0, 0.0, 0.0],
 			color: [0.0, 1.0, 0.0],
-			needs_world_transform: 1,
 		},
 		BouncingCubeVertex {
 			position: [0.1, -0.1, 0.1],
 			normal: [1.0, 0.0, 0.0],
 			color: [0.0, 1.0, 0.0],
-			needs_world_transform: 1,
 		},
 		BouncingCubeVertex {
 			position: [0.1, 0.1, 0.1],
 			normal: [1.0, 0.0, 0.0],
 			color: [0.0, 1.0, 0.0],
-			needs_world_transform: 1,
 		},
 		BouncingCubeVertex {
 			position: [0.1, 0.1, -0.1],
 			normal: [1.0, 0.0, 0.0],
 			color: [0.0, 1.0, 0.0],
-			needs_world_transform: 1,
 		},
 		// bottom face
 		BouncingCubeVertex {
 			position: [-0.1, -0.1, 0.1],
 			normal: [0.0, -1.0, 0.0],
 			color: [0.0, 0.0, 1.0],
-			needs_world_transform: 1,
 		},
 		BouncingCubeVertex {
 			position: [0.1, -0.1, 0.1],
 			normal: [0.0, -1.0, 0.0],
 			color: [0.0, 0.0, 1.0],
-			needs_world_transform: 1,
 		},
 		BouncingCubeVertex {
 			position: [0.1, -0.1, -0.1],
 			normal: [0.0, -1.0, 0.0],
 			color: [0.0, 0.0, 1.0],
-			needs_world_transform: 1,
 		},
 		BouncingCubeVertex {
 			position: [-0.1, -0.1, -0.1],
 			normal: [0.0, -1.0, 0.0],
 			color: [0.0, 0.0, 1.0],
-			needs_world_transform: 1,
 		},
 		// top face
 		BouncingCubeVertex {
 			position: [-0.1, 0.1, 0.1],
 			normal: [0.0, 1.0, 0.0],
 			color: [0.0, 0.0, 1.0],
-			needs_world_transform: 1,
 		},
 		BouncingCubeVertex {
 			position: [0.1, 0.1, 0.1],
 			normal: [0.0, 1.0, 0.0],
 			color: [0.0, 0.0, 1.0],
-			needs_world_transform: 1,
 		},
 		BouncingCubeVertex {
 			position: [0.1, 0.1, -0.1],
 			normal: [0.0, 1.0, 0.0],
 			color: [0.0, 0.0, 1.0],
-			needs_world_transform: 1,
 		},
 		BouncingCubeVertex {
 			position: [-0.1, 0.1, -0.1],
 			normal: [0.0, 1.0, 0.0],
 			color: [0.0, 0.0, 1.0],
-			needs_world_transform: 1,
 		},
 	];
 
@@ -390,125 +365,105 @@ impl BouncingCubeScene {
 				position: [-x_bound, -y_bound, 1.0],
 				normal: [0.0, 0.0, -1.0],
 				color: [0.5, 0.5, 0.5],
-				needs_world_transform: 0,
 			},
 			BouncingCubeVertex {
 				position: [x_bound, -y_bound, 1.0],
 				normal: [0.0, 0.0, -1.0],
 				color: [0.5, 0.5, 0.5],
-				needs_world_transform: 0,
 			},
 			BouncingCubeVertex {
 				position: [x_bound, y_bound, 1.0],
 				normal: [0.0, 0.0, -1.0],
 				color: [0.5, 0.5, 0.5],
-				needs_world_transform: 0,
 			},
 			BouncingCubeVertex {
 				position: [-x_bound, y_bound, 1.0],
 				normal: [0.0, 0.0, -1.0],
 				color: [0.5, 0.5, 0.5],
-				needs_world_transform: 0,
 			},
 			// left wall
 			BouncingCubeVertex {
 				position: [-x_bound, -y_bound, 1.0],
 				normal: [1.0, 0.0, 0.0],
 				color: [0.5, 0.5, 0.5],
-				needs_world_transform: 0,
 			},
 			BouncingCubeVertex {
 				position: [-x_bound, -y_bound, -1.0],
 				normal: [1.0, 0.0, 0.0],
 				color: [0.5, 0.5, 0.5],
-				needs_world_transform: 0,
 			},
 			BouncingCubeVertex {
 				position: [-x_bound, y_bound, -1.0],
 				normal: [1.0, 0.0, 0.0],
 				color: [0.5, 0.5, 0.5],
-				needs_world_transform: 0,
 			},
 			BouncingCubeVertex {
 				position: [-x_bound, y_bound, 1.0],
 				normal: [1.0, 0.0, 0.0],
 				color: [0.5, 0.5, 0.5],
-				needs_world_transform: 0,
 			},
 			// right wall
 			BouncingCubeVertex {
 				position: [x_bound, -y_bound, 1.0],
 				normal: [-1.0, 0.0, 0.0],
 				color: [0.5, 0.5, 0.5],
-				needs_world_transform: 0,
 			},
 			BouncingCubeVertex {
 				position: [x_bound, -y_bound, -1.0],
 				normal: [-1.0, 0.0, 0.0],
 				color: [0.5, 0.5, 0.5],
-				needs_world_transform: 0,
 			},
 			BouncingCubeVertex {
 				position: [x_bound, y_bound, -1.0],
 				normal: [-1.0, 0.0, 0.0],
 				color: [0.5, 0.5, 0.5],
-				needs_world_transform: 0,
 			},
 			BouncingCubeVertex {
 				position: [x_bound, y_bound, 1.0],
 				normal: [-1.0, 0.0, 0.0],
 				color: [0.5, 0.5, 0.5],
-				needs_world_transform: 0,
 			},
 			// top wall
 			BouncingCubeVertex {
 				position: [-x_bound, -y_bound, -1.0],
 				normal: [0.0, 1.0, 0.0],
 				color: [0.5, 0.5, 0.5],
-				needs_world_transform: 0,
 			},
 			BouncingCubeVertex {
 				position: [x_bound, -y_bound, -1.0],
 				normal: [0.0, 1.0, 0.0],
 				color: [0.5, 0.5, 0.5],
-				needs_world_transform: 0,
 			},
 			BouncingCubeVertex {
 				position: [x_bound, -y_bound, 1.0],
 				normal: [0.0, 1.0, 0.0],
 				color: [0.5, 0.5, 0.5],
-				needs_world_transform: 0,
 			},
 			BouncingCubeVertex {
 				position: [-x_bound, -y_bound, 1.0],
 				normal: [0.0, 1.0, 0.0],
 				color: [0.5, 0.5, 0.5],
-				needs_world_transform: 0,
 			},
 			// bottom wall
 			BouncingCubeVertex {
 				position: [-x_bound, y_bound, -1.0],
 				normal: [0.0, -1.0, 0.0],
 				color: [0.5, 0.5, 0.5],
-				needs_world_transform: 0,
 			},
 			BouncingCubeVertex {
 				position: [x_bound, y_bound, -1.0],
 				normal: [0.0, -1.0, 0.0],
 				color: [0.5, 0.5, 0.5],
-				needs_world_transform: 0,
 			},
 			BouncingCubeVertex {
 				position: [x_bound, y_bound, 1.0],
 				normal: [0.0, -1.0, 0.0],
 				color: [0.5, 0.5, 0.5],
-				needs_world_transform: 0,
 			},
 			BouncingCubeVertex {
 				position: [-x_bound, y_bound, 1.0],
 				normal: [0.0, -1.0, 0.0],
 				color: [0.5, 0.5, 0.5],
-				needs_world_transform: 0,
 			},
 		]
 	}
@@ -532,33 +487,74 @@ impl crate::scene::Scene for BouncingCubeScene {
 		);
 	}
 
+	/**
+	 * Update the cube's position and rotation while handling collisions. Collisions are handled in a very simple
+	 * manner, but a more accurate way of handling them would be to use torques and forces.
+	 */
 	fn update(&mut self, dt: f32) {
 		self.cube_rotation_angle += std::f32::consts::FRAC_PI_4 * dt;
 		self.cube_position += self.cube_velocity * dt;
-		if self.cube_position.x < -self.x_bound + 0.1 {
-			self.cube_position.x = -self.x_bound + 0.1;
-			self.cube_velocity.x *= -1.0;
-		}
-		if self.cube_position.x > self.x_bound - 0.1 {
-			self.cube_position.x = self.x_bound - 0.1;
-			self.cube_velocity.x *= -1.0;
-		}
-		if self.cube_position.y < -self.y_bound + 0.1 {
-			self.cube_position.y = -self.y_bound + 0.1;
-			self.cube_velocity.y *= -1.0;
-		}
-		if self.cube_position.y > self.y_bound - 0.1 {
-			self.cube_position.y = self.y_bound - 0.1;
-			self.cube_velocity.y *= -1.0;
-		}
-		if self.cube_position.z < -0.9 {
-			self.cube_position.z = -0.9;
-			self.cube_velocity.z *= -1.0;
-		}
-		if self.cube_position.z > 0.9 {
-			self.cube_position.z = 0.9;
-			self.cube_velocity.z *= -1.0;
-		}
+		let transformation_matrix = glam::Mat4::from_rotation_translation(
+			glam::Quat::from_axis_angle(self.cube_rotation_axis.into(), self.cube_rotation_angle),
+			self.cube_position.into(),
+		);
+		self.cube_vertices = Self::CUBE_VERTICES
+			.into_iter()
+			.map(|cube_vertex| {
+				let new_position = transformation_matrix
+					* glam::Vec4::from((glam::Vec3A::from(cube_vertex.position), 1.0));
+				let new_normal = transformation_matrix
+					* glam::Vec4::from((glam::Vec3A::from(cube_vertex.normal), 0.0));
+				BouncingCubeVertex {
+					position: [new_position.x, new_position.y, new_position.z],
+					normal: [new_normal.x, new_normal.y, new_normal.z],
+					..cube_vertex
+				}
+			})
+			.collect();
+		let mut position_adjustment = glam::Vec3A::ZERO;
+		let mut velocity_multiplier = glam::Vec3A::ONE;
+		self.cube_vertices
+			.iter()
+			.map(|vertex| vertex.position)
+			.for_each(|position| {
+				if position[0] < -self.x_bound {
+					position_adjustment.x = position_adjustment.x.max(-self.x_bound - position[0]);
+					velocity_multiplier.x = -1.0;
+				}
+				if position[0] > self.x_bound {
+					position_adjustment.x = position_adjustment.x.min(self.x_bound - position[0]);
+					velocity_multiplier.x = -1.0;
+				}
+				if position[1] < -self.y_bound {
+					position_adjustment.y = position_adjustment.y.max(-self.y_bound - position[1]);
+					velocity_multiplier.y = -1.0;
+				}
+				if position[1] > self.y_bound {
+					position_adjustment.y = position_adjustment.y.min(self.y_bound - position[1]);
+					velocity_multiplier.y = -1.0;
+				}
+				if position[2] < -1.0 {
+					position_adjustment.z = position_adjustment.z.max(-1.0 - position[2]);
+					velocity_multiplier.z = -1.0;
+				}
+				if position[2] > 1.0 {
+					position_adjustment.z = position_adjustment.z.min(1.0 - position[2]);
+					velocity_multiplier.z = -1.0;
+				}
+			});
+		self.cube_velocity *= velocity_multiplier;
+		self.cube_vertices = self
+			.cube_vertices
+			.iter()
+			.map(|cube_vertex| {
+				let new_position = glam::Vec3A::from(cube_vertex.position) + position_adjustment;
+				BouncingCubeVertex {
+					position: new_position.into(),
+					..*cube_vertex
+				}
+			})
+			.collect();
 	}
 
 	fn render(
@@ -593,20 +589,14 @@ impl crate::scene::Scene for BouncingCubeScene {
 		});
 		let bouncing_cube_uniform = BouncingCubeTransformationUniform {
 			camera_transformation: self.camera.transformation.to_cols_array_2d(),
-			world_transformation: glam::Mat4::from_rotation_translation(
-				glam::Quat::from_axis_angle(
-					self.cube_rotation_axis.into(),
-					self.cube_rotation_angle,
-				),
-				self.cube_position.into(),
-			)
-			.to_cols_array_2d(),
 		};
 		queue.write_buffer(
 			&self.vertex_buffer,
 			0,
 			bytemuck::cast_slice(
-				&Self::CUBE_VERTICES
+				&self
+					.cube_vertices
+					.clone()
 					.into_iter()
 					.chain(self.wall_vertices.clone().into_iter())
 					.collect::<Vec<_>>(),
