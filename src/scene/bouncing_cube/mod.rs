@@ -513,48 +513,69 @@ impl crate::scene::Scene for BouncingCubeScene {
 			})
 			.collect();
 		let mut position_adjustment = glam::Vec3A::ZERO;
-		let mut velocity_multiplier = glam::Vec3A::ONE;
+		let collision_shift_amount = 0.001;
+		let mut is_collision = false;
 		self.cube_vertices
 			.iter()
 			.map(|vertex| vertex.position)
 			.for_each(|position| {
 				if position[0] < -self.x_bound {
-					position_adjustment.x = position_adjustment.x.max(-self.x_bound - position[0]);
-					velocity_multiplier.x = -1.0;
+					position_adjustment.x = position_adjustment
+						.x
+						.max(-self.x_bound - position[0] + collision_shift_amount);
+					self.cube_velocity.x = self.cube_velocity.x.abs();
+					is_collision = true;
 				}
 				if position[0] > self.x_bound {
-					position_adjustment.x = position_adjustment.x.min(self.x_bound - position[0]);
-					velocity_multiplier.x = -1.0;
+					position_adjustment.x = position_adjustment
+						.x
+						.min(self.x_bound - position[0] - collision_shift_amount);
+					self.cube_velocity.x = -self.cube_velocity.x.abs();
+					is_collision = true;
 				}
 				if position[1] < -self.y_bound {
-					position_adjustment.y = position_adjustment.y.max(-self.y_bound - position[1]);
-					velocity_multiplier.y = -1.0;
+					position_adjustment.y = position_adjustment
+						.y
+						.max(-self.y_bound - position[1] + collision_shift_amount);
+					self.cube_velocity.y = self.cube_velocity.y.abs();
+					is_collision = true;
 				}
 				if position[1] > self.y_bound {
-					position_adjustment.y = position_adjustment.y.min(self.y_bound - position[1]);
-					velocity_multiplier.y = -1.0;
+					position_adjustment.y = position_adjustment
+						.y
+						.min(self.y_bound - position[1] - collision_shift_amount);
+					self.cube_velocity.y = -self.cube_velocity.y.abs();
+					is_collision = true;
 				}
 				if position[2] < -1.0 {
-					position_adjustment.z = position_adjustment.z.max(-1.0 - position[2]);
-					velocity_multiplier.z = -1.0;
+					position_adjustment.z = position_adjustment
+						.z
+						.max(-1.0 - position[2] + collision_shift_amount);
+					self.cube_velocity.z = self.cube_velocity.z.abs();
+					is_collision = true;
 				}
 				if position[2] > 1.0 {
-					position_adjustment.z = position_adjustment.z.min(1.0 - position[2]);
-					velocity_multiplier.z = -1.0;
+					position_adjustment.z = position_adjustment
+						.z
+						.min(1.0 - position[2] - collision_shift_amount);
+					self.cube_velocity.z = -self.cube_velocity.z.abs();
+					is_collision = true;
 				}
 			});
-		self.cube_velocity *= velocity_multiplier;
-		self.cube_vertices = self
-			.cube_vertices
-			.iter()
-			.map(|cube_vertex| {
-				let new_position = glam::Vec3A::from(cube_vertex.position) + position_adjustment;
-				BouncingCubeVertex {
-					position: new_position.into(),
-					..*cube_vertex
-				}
-			})
-			.collect();
+		if is_collision {
+			self.cube_vertices = self
+				.cube_vertices
+				.iter()
+				.map(|cube_vertex| {
+					let new_position =
+						glam::Vec3A::from(cube_vertex.position) + position_adjustment;
+					BouncingCubeVertex {
+						position: new_position.into(),
+						..*cube_vertex
+					}
+				})
+				.collect();
+		}
 	}
 
 	fn render(
