@@ -563,18 +563,10 @@ impl crate::scene::Scene for BouncingCubeScene {
 				}
 			});
 		if is_collision {
-			self.cube_vertices = self
-				.cube_vertices
-				.iter()
-				.map(|cube_vertex| {
-					let new_position =
-						glam::Vec3A::from(cube_vertex.position) + position_adjustment;
-					BouncingCubeVertex {
-						position: new_position.into(),
-						..*cube_vertex
-					}
-				})
-				.collect();
+			self.cube_vertices.iter_mut().for_each(|cube_vertex| {
+				cube_vertex.position =
+					(glam::Vec3A::from(cube_vertex.position) + position_adjustment).into();
+			});
 		}
 	}
 
