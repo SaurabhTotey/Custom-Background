@@ -4,7 +4,7 @@ use wgpu::util::DeviceExt;
 /**
  * TODO:
  *  * optimize when buffers are being written to so it doesn't happen every frame
- *  * cube shadows on wall
+ *  * point light cube shadows on wall
  *  * blinn-phong lighting
  */
 
@@ -36,6 +36,7 @@ struct BouncingCubeLightingUniform {
 
 pub struct BouncingCubeScene {
 	render_pipeline: wgpu::RenderPipeline,
+	light_view_render_pipeline: wgpu::RenderPipeline,
 	cube_vertices: Vec<BouncingCubeVertex>,
 	wall_vertices: Vec<BouncingCubeVertex>,
 	vertex_buffer: wgpu::Buffer,
@@ -46,6 +47,7 @@ pub struct BouncingCubeScene {
 	cube_light_uniform_buffer: wgpu::Buffer,
 	cube_light_uniform_bind_group: wgpu::BindGroup,
 	depth_texture: crate::scene::utilities::texture::Texture,
+	light_view_depth_texture: crate::scene::utilities::texture::Texture,
 	camera: crate::scene::utilities::camera::Camera,
 	cube_position: glam::Vec3A,
 	cube_velocity: glam::Vec3A,
@@ -57,7 +59,9 @@ pub struct BouncingCubeScene {
 
 impl BouncingCubeScene {
 	pub fn new(device: &wgpu::Device, surface_configuration: &wgpu::SurfaceConfiguration) -> Self {
-		let shader_module = device.create_shader_module(&wgpu::include_wgsl!("shader.wgsl"));
+		let render_shader_module = device.create_shader_module(&wgpu::include_wgsl!("render.wgsl"));
+		let light_view_render_shader_module =
+			device.create_shader_module(&wgpu::include_wgsl!("render.wgsl"));
 		let vertex_buffer = device.create_buffer(&wgpu::BufferDescriptor {
 			label: Some("Bouncing cube scene vertex buffer"),
 			size: std::mem::size_of::<BouncingCubeVertex>() as wgpu::BufferAddress * 44, // 24 for the cube, 20 for the walls
@@ -135,6 +139,12 @@ impl BouncingCubeScene {
 			surface_configuration,
 			"Bouncing cube scene",
 		);
+		let light_view_depth_texture =
+			crate::scene::utilities::texture::Texture::create_depth_texture(
+				device,
+				surface_configuration,
+				"Bouncing cube scene light",
+			);
 		let render_pipeline_layout =
 			device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
 				label: Some("Bouncing cube scene pipeline layout"),
@@ -148,7 +158,7 @@ impl BouncingCubeScene {
 			label: Some("Bouncing cube scene pipeline"),
 			layout: Some(&render_pipeline_layout),
 			vertex: wgpu::VertexState {
-				module: &shader_module,
+				module: &render_shader_module,
 				entry_point: "vertex_stage",
 				buffers: &[wgpu::VertexBufferLayout {
 					array_stride: std::mem::size_of::<BouncingCubeVertex>() as wgpu::BufferAddress,
@@ -157,7 +167,7 @@ impl BouncingCubeScene {
 				}],
 			},
 			fragment: Some(wgpu::FragmentState {
-				module: &shader_module,
+				module: &render_shader_module,
 				entry_point: "fragment_stage",
 				targets: &[wgpu::ColorTargetState {
 					format: surface_configuration.format,
@@ -176,6 +186,34 @@ impl BouncingCubeScene {
 			multisample: wgpu::MultisampleState::default(),
 			multiview: None,
 		});
+		// TODO: the layouts need to be different: this one doesn't need the light uniform, and the main pipeline will
+		// need another uniform to sample the depth texture from this pipeline
+		let light_view_render_pipeline =
+			device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+				label: Some("Bouncing cube scene light pipeline"),
+				layout: Some(&render_pipeline_layout),
+				vertex: wgpu::VertexState {
+					module: &light_view_render_shader_module,
+					entry_point: "vertex_stage",
+					buffers: &[wgpu::VertexBufferLayout {
+						array_stride: std::mem::size_of::<BouncingCubeVertex>()
+							as wgpu::BufferAddress,
+						step_mode: wgpu::VertexStepMode::Vertex,
+						attributes: &wgpu::vertex_attr_array![0 => Float32x3, 1 => Float32x3, 2 => Float32x3],
+					}],
+				},
+				fragment: None,
+				primitive: wgpu::PrimitiveState::default(),
+				depth_stencil: Some(wgpu::DepthStencilState {
+					format: crate::scene::utilities::texture::Texture::DEPTH_FORMAT,
+					depth_write_enabled: true,
+					depth_compare: wgpu::CompareFunction::Less,
+					stencil: wgpu::StencilState::default(),
+					bias: wgpu::DepthBiasState::default(),
+				}),
+				multisample: wgpu::MultisampleState::default(),
+				multiview: None,
+			});
 		let camera = crate::scene::utilities::camera::Camera::new(
 			std::f32::consts::PI / 2.0,
 			surface_configuration.width as f32 / surface_configuration.height as f32,
@@ -204,6 +242,7 @@ impl BouncingCubeScene {
 		};
 		Self {
 			render_pipeline,
+			light_view_render_pipeline,
 			cube_vertices,
 			wall_vertices,
 			vertex_buffer,
@@ -214,6 +253,7 @@ impl BouncingCubeScene {
 			cube_light_uniform_buffer,
 			cube_light_uniform_bind_group,
 			depth_texture,
+			light_view_depth_texture,
 			camera,
 			cube_position,
 			cube_velocity,
@@ -485,6 +525,12 @@ impl crate::scene::Scene for BouncingCubeScene {
 			surface_configuration,
 			"Bouncing cube scene",
 		);
+		self.light_view_depth_texture =
+			crate::scene::utilities::texture::Texture::create_depth_texture(
+				device,
+				surface_configuration,
+				"Bouncing cube scene light",
+			);
 	}
 
 	/**
@@ -576,6 +622,56 @@ impl crate::scene::Scene for BouncingCubeScene {
 		queue: &wgpu::Queue,
 		output_texture_view: &wgpu::TextureView,
 	) {
+		// Write buffers that don't change between render passes.
+		queue.write_buffer(
+			&self.vertex_buffer,
+			0,
+			bytemuck::cast_slice(
+				&self
+					.cube_vertices
+					.clone()
+					.into_iter()
+					.chain(self.wall_vertices.clone().into_iter())
+					.collect::<Vec<_>>(),
+			),
+		);
+		queue.write_buffer(
+			&self.cube_light_uniform_buffer,
+			0,
+			bytemuck::bytes_of(&self.cube_light),
+		);
+
+		// Run the render pass from the light's point of view to get the shadow depth texture.
+		let mut light_render_pass =
+			command_encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+				label: Some("Bouncing cube scene light render pass"),
+				color_attachments: &[],
+				depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachment {
+					view: &self.light_view_depth_texture.texture_view,
+					depth_ops: Some(wgpu::Operations {
+						load: wgpu::LoadOp::Clear(1.0),
+						store: true,
+					}),
+					stencil_ops: None,
+				}),
+			});
+		let light_view_transformation_uniform = BouncingCubeTransformationUniform {
+			camera_transformation: glam::Mat4::IDENTITY.to_cols_array_2d(),
+		};
+		queue.write_buffer(
+			&self.cube_transform_uniform_buffer,
+			0,
+			bytemuck::bytes_of(&light_view_transformation_uniform),
+		);
+		light_render_pass.set_pipeline(&self.light_view_render_pipeline);
+		light_render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
+		light_render_pass.set_index_buffer(self.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
+		light_render_pass.set_bind_group(0, &self.cube_transform_uniform_bind_group, &[]);
+		light_render_pass.set_bind_group(1, &self.cube_light_uniform_bind_group, &[]);
+		light_render_pass.draw_indexed(0..36 + 6 * self.wall_vertices.len() as u32 / 4, 0, 0..1);
+		drop(light_render_pass);
+
+		// Run the main render pass to actually render the scene.
 		let mut render_pass = command_encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
 			label: Some("Bouncing cube scene render pass"),
 			color_attachments: &[wgpu::RenderPassColorAttachment {
@@ -600,30 +696,13 @@ impl crate::scene::Scene for BouncingCubeScene {
 				stencil_ops: None,
 			}),
 		});
-		let bouncing_cube_uniform = BouncingCubeTransformationUniform {
+		let render_transformation_uniform = BouncingCubeTransformationUniform {
 			camera_transformation: self.camera.transformation.to_cols_array_2d(),
 		};
 		queue.write_buffer(
-			&self.vertex_buffer,
-			0,
-			bytemuck::cast_slice(
-				&self
-					.cube_vertices
-					.clone()
-					.into_iter()
-					.chain(self.wall_vertices.clone().into_iter())
-					.collect::<Vec<_>>(),
-			),
-		);
-		queue.write_buffer(
 			&self.cube_transform_uniform_buffer,
 			0,
-			bytemuck::bytes_of(&bouncing_cube_uniform),
-		);
-		queue.write_buffer(
-			&self.cube_light_uniform_buffer,
-			0,
-			bytemuck::bytes_of(&self.cube_light),
+			bytemuck::bytes_of(&render_transformation_uniform),
 		);
 		render_pass.set_pipeline(&self.render_pipeline);
 		render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
