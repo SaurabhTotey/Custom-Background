@@ -2,6 +2,9 @@ pub struct Texture {
 	pub texture: wgpu::Texture,
 	pub texture_view: wgpu::TextureView,
 	pub sampler: wgpu::Sampler,
+	sample_type: wgpu::TextureSampleType,
+	view_dimension: wgpu::TextureViewDimension,
+	sampler_binding_type: wgpu::SamplerBindingType,
 }
 
 impl Texture {
@@ -40,6 +43,54 @@ impl Texture {
 			texture,
 			texture_view,
 			sampler,
+			sample_type: wgpu::TextureSampleType::Depth,
+			view_dimension: wgpu::TextureViewDimension::D2,
+			sampler_binding_type: wgpu::SamplerBindingType::Comparison,
 		}
+	}
+
+	pub fn create_bind_group(
+		&self,
+		device: &wgpu::Device,
+		label: &str,
+		visibility: wgpu::ShaderStages,
+	) -> (wgpu::BindGroupLayout, wgpu::BindGroup) {
+		let label = label.to_owned() + " bind group";
+		let layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+			label: Some(&(label.clone() + " layout")),
+			entries: &[
+				wgpu::BindGroupLayoutEntry {
+					binding: 0,
+					visibility,
+					ty: wgpu::BindingType::Texture {
+						sample_type: self.sample_type,
+						view_dimension: self.view_dimension,
+						multisampled: false,
+					},
+					count: None,
+				},
+				wgpu::BindGroupLayoutEntry {
+					binding: 1,
+					visibility,
+					ty: wgpu::BindingType::Sampler(self.sampler_binding_type),
+					count: None,
+				},
+			],
+		});
+		let group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+			label: Some(&label),
+			layout: &layout,
+			entries: &[
+				wgpu::BindGroupEntry {
+					binding: 0,
+					resource: wgpu::BindingResource::TextureView(&self.texture_view),
+				},
+				wgpu::BindGroupEntry {
+					binding: 1,
+					resource: wgpu::BindingResource::Sampler(&self.sampler),
+				},
+			],
+		});
+		(layout, group)
 	}
 }

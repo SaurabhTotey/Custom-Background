@@ -3,7 +3,6 @@ use wgpu::util::DeviceExt;
 
 /**
  * TODO:
- *  * optimize when buffers are being written to so it doesn't happen every frame
  *  * point light cube shadows on wall
  *  * blinn-phong lighting
  */
@@ -46,6 +45,7 @@ pub struct BouncingCubeScene {
 	cube_light: BouncingCubeLightingUniform,
 	cube_light_uniform_buffer: wgpu::Buffer,
 	cube_light_uniform_bind_group: wgpu::BindGroup,
+	cube_light_shadow_texture_bind_group: wgpu::BindGroup,
 	depth_texture: crate::scene::utilities::texture::Texture,
 	light_view_depth_texture: crate::scene::utilities::texture::Texture,
 	camera: crate::scene::utilities::camera::Camera,
@@ -145,12 +145,19 @@ impl BouncingCubeScene {
 				surface_configuration,
 				"Bouncing cube scene light",
 			);
+		let (cube_light_shadow_texture_bind_group_layout, cube_light_shadow_texture_bind_group) =
+			light_view_depth_texture.create_bind_group(
+				device,
+				"Bouncing cube scene light shadow",
+				wgpu::ShaderStages::FRAGMENT,
+			);
 		let render_pipeline_layout =
 			device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
 				label: Some("Bouncing cube scene pipeline layout"),
 				bind_group_layouts: &[
 					&cube_transform_uniform_bind_group_layout,
 					&cube_light_uniform_bind_group_layout,
+					&cube_light_shadow_texture_bind_group_layout,
 				],
 				push_constant_ranges: &[],
 			});
@@ -257,6 +264,7 @@ impl BouncingCubeScene {
 			cube_light,
 			cube_light_uniform_buffer,
 			cube_light_uniform_bind_group,
+			cube_light_shadow_texture_bind_group,
 			depth_texture,
 			light_view_depth_texture,
 			camera,
@@ -713,6 +721,7 @@ impl crate::scene::Scene for BouncingCubeScene {
 		render_pass.set_index_buffer(self.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
 		render_pass.set_bind_group(0, &self.cube_transform_uniform_bind_group, &[]);
 		render_pass.set_bind_group(1, &self.cube_light_uniform_bind_group, &[]);
+		render_pass.set_bind_group(2, &self.cube_light_shadow_texture_bind_group, &[]);
 		render_pass.draw_indexed(0..36 + 6 * self.wall_vertices.len() as u32 / 4, 0, 0..1);
 	}
 }
