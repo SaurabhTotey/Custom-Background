@@ -154,6 +154,7 @@ impl BouncingCubeScene {
 				],
 				push_constant_ranges: &[],
 			});
+		// TODO: the main pipeline will need another uniform to sample the depth texture from this pipeline
 		let render_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
 			label: Some("Bouncing cube scene pipeline"),
 			layout: Some(&render_pipeline_layout),
@@ -186,12 +187,16 @@ impl BouncingCubeScene {
 			multisample: wgpu::MultisampleState::default(),
 			multiview: None,
 		});
-		// TODO: the layouts need to be different: this one doesn't need the light uniform, and the main pipeline will
-		// need another uniform to sample the depth texture from this pipeline
+		let light_view_render_pipeline_layout =
+			device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+				label: Some("Bouncing cube scene pipeline layout"),
+				bind_group_layouts: &[&cube_transform_uniform_bind_group_layout],
+				push_constant_ranges: &[],
+			});
 		let light_view_render_pipeline =
 			device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
 				label: Some("Bouncing cube scene light pipeline"),
-				layout: Some(&render_pipeline_layout),
+				layout: Some(&light_view_render_pipeline_layout),
 				vertex: wgpu::VertexState {
 					module: &light_view_render_shader_module,
 					entry_point: "vertex_stage",
@@ -667,7 +672,6 @@ impl crate::scene::Scene for BouncingCubeScene {
 		light_render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
 		light_render_pass.set_index_buffer(self.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
 		light_render_pass.set_bind_group(0, &self.cube_transform_uniform_bind_group, &[]);
-		light_render_pass.set_bind_group(1, &self.cube_light_uniform_bind_group, &[]);
 		light_render_pass.draw_indexed(0..36 + 6 * self.wall_vertices.len() as u32 / 4, 0, 0..1);
 		drop(light_render_pass);
 
