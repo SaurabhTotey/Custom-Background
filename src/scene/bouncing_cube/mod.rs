@@ -4,6 +4,7 @@ use wgpu::util::DeviceExt;
 /**
  * TODO:
  *  * point light cube shadows on wall
+ *  * make shadow maps not change on screen size
  *  * blinn-phong lighting
  */
 
@@ -49,6 +50,7 @@ pub struct BouncingCubeScene {
 	depth_texture: crate::scene::utilities::texture::Texture,
 	light_view_depth_texture: crate::scene::utilities::texture::Texture,
 	camera: crate::scene::utilities::camera::Camera,
+	light_view_camera: crate::scene::utilities::camera::Camera,
 	cube_position: glam::Vec3A,
 	cube_velocity: glam::Vec3A,
 	cube_rotation_angle: f32,
@@ -252,6 +254,11 @@ impl BouncingCubeScene {
 			quadratic_attenuation_term: 1.8,
 			_padding: 0.0,
 		};
+		let mut light_view_camera = crate::scene::utilities::camera::Camera::new(
+			std::f32::consts::PI / 2.0,
+			surface_configuration.width as f32 / surface_configuration.height as f32,
+		);
+		light_view_camera.position = glam::Vec3A::from(glam::Vec4::from(cube_light.position));
 		Self {
 			render_pipeline,
 			light_view_render_pipeline,
@@ -268,6 +275,7 @@ impl BouncingCubeScene {
 			depth_texture,
 			light_view_depth_texture,
 			camera,
+			light_view_camera,
 			cube_position,
 			cube_velocity,
 			cube_rotation_angle,
@@ -531,6 +539,9 @@ impl crate::scene::Scene for BouncingCubeScene {
 		self.camera.aspect_ratio =
 			surface_configuration.width as f32 / surface_configuration.height as f32;
 		self.camera.recalculate_transformation_and_view_planes();
+		self.light_view_camera.aspect_ratio = self.camera.aspect_ratio;
+		self.light_view_camera
+			.recalculate_transformation_and_view_planes();
 		self.x_bound = self.y_bound * self.camera.aspect_ratio;
 		self.wall_vertices = Self::get_wall_vertices_for_bounds(self.x_bound, self.y_bound);
 		self.depth_texture = crate::scene::utilities::texture::Texture::create_depth_texture(
@@ -669,7 +680,7 @@ impl crate::scene::Scene for BouncingCubeScene {
 				}),
 			});
 		let light_view_transformation_uniform = BouncingCubeTransformationUniform {
-			camera_transformation: glam::Mat4::IDENTITY.to_cols_array_2d(),
+			camera_transformation: self.light_view_camera.transformation.to_cols_array_2d(),
 		};
 		queue.write_buffer(
 			&self.cube_transform_uniform_buffer,
