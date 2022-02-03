@@ -32,6 +32,11 @@ struct FragmentOutput {
 	[[location(0)]] color: vec4<f32>;
 };
 
+[[group(2), binding(0)]]
+var light_view_texture: texture_depth_2d;
+[[group(2), binding(1)]]
+var light_view_sampler: sampler_comparison;
+
 [[stage(vertex)]]
 fn vertex_stage(input: VertexInput) -> FragmentInput {
 	return FragmentInput(
