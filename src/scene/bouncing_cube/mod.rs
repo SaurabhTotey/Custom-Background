@@ -1,3 +1,4 @@
+mod bouncing_cube_model;
 use rand::Rng;
 use wgpu::util::DeviceExt;
 
