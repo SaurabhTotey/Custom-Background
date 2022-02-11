@@ -100,4 +100,48 @@ impl Camera {
 			.iter()
 			.all(|&plane| point.dot(glam::Vec3A::from(plane)) + plane.w + fudge_radius >= 0.0)
 	}
+
+	/**
+	 * Creates a bind group that only binds a buffer meant to store this camera.
+	 */
+	pub fn create_bind_group(
+		&self,
+		device: &wgpu::Device,
+		label: &str,
+	) -> (wgpu::Buffer, wgpu::BindGroupLayout, wgpu::BindGroup) {
+		let label = label.to_owned() + " camera";
+		let transform_uniform_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+			label: Some(&(label.clone() + " uniform buffer")),
+			size: std::mem::size_of::<glam::Mat4>() as wgpu::BufferAddress,
+			usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+			mapped_at_creation: false,
+		});
+		let transform_bind_group_layout =
+			device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+				label: Some(&(label.clone() + " bind group layout")),
+				entries: &[wgpu::BindGroupLayoutEntry {
+					binding: 0,
+					visibility: wgpu::ShaderStages::VERTEX,
+					ty: wgpu::BindingType::Buffer {
+						ty: wgpu::BufferBindingType::Uniform,
+						has_dynamic_offset: false,
+						min_binding_size: None,
+					},
+					count: None,
+				}],
+			});
+		let transform_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+			label: Some(&(label.clone() + " bind group")),
+			layout: &transform_bind_group_layout,
+			entries: &[wgpu::BindGroupEntry {
+				binding: 0,
+				resource: transform_uniform_buffer.as_entire_binding(),
+			}],
+		});
+		(
+			transform_uniform_buffer,
+			transform_bind_group_layout,
+			transform_bind_group,
+		)
+	}
 }

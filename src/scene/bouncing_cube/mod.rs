@@ -4,6 +4,7 @@ use wgpu::util::DeviceExt;
 
 /**
  * TODO:
+ *  * use new bouncing_cube_model structs and camera.create_bind_group method
  *  * point light cube shadows on wall
  *  * make shadow maps not change on screen size
  *  * blinn-phong lighting
