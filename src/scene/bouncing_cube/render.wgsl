@@ -17,25 +17,9 @@ struct FragmentInput {
 	[[location(2)]] color: vec4<f32>;
 };
 
-struct LightInformation {
-	position: vec3<f32>;
-	ambient_light: vec3<f32>;
-	diffuse_light: vec3<f32>;
-	constant_attenuation_term: f32;
-	linear_attenuation_term: f32;
-	quadratic_attenuation_term: f32;
-};
-[[group(1), binding(0)]]
-var<uniform> cube_light: LightInformation;
-
 struct FragmentOutput {
 	[[location(0)]] color: vec4<f32>;
 };
-
-[[group(2), binding(0)]]
-var light_view_texture: texture_depth_2d;
-[[group(2), binding(1)]]
-var light_view_sampler: sampler_comparison;
 
 [[stage(vertex)]]
 fn vertex_stage(input: VertexInput) -> FragmentInput {
@@ -49,11 +33,5 @@ fn vertex_stage(input: VertexInput) -> FragmentInput {
 
 [[stage(fragment)]]
 fn fragment_stage(input: FragmentInput) -> FragmentOutput {
-	let position_to_light_vector = cube_light.position - input.world_position.xyz;
-	let light_distance = length(position_to_light_vector);
-	let light_direction = normalize(position_to_light_vector);
-	let diffuse_lighting = max(dot(light_direction, input.normal.xyz), 0.0) * cube_light.diffuse_light;
-	let attenuation = 1.0 / (cube_light.constant_attenuation_term + cube_light.linear_attenuation_term * light_distance+ cube_light.quadratic_attenuation_term * light_distance * light_distance);
-	let total_lighting = vec4<f32>(attenuation * min(diffuse_lighting + cube_light.ambient_light, vec3<f32>(1.0)), 1.0);
-	return FragmentOutput(total_lighting * input.color);
+	return FragmentOutput(input.color);
 }

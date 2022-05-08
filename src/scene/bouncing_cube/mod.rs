@@ -3,10 +3,8 @@ use wgpu::util::DeviceExt;
 
 /**
  * TODO:
- *  * make a transformation struct in utilities and instance the vertices so that each face is an instance with its own transformation
- *		this is so that walls can be transformed separately from cube faces
- *  * point light cube shadows on wall
- *  * make shadow maps not change on screen size
+ *  * transform the cube and add walls with their own transform (only transforms so far are camera)
+ *  * point lights with cube shadows on wall
  *  * blinn-phong lighting
  */
 
@@ -349,7 +347,6 @@ impl BouncingCubeScene {
 			color: [0.5, 0.5, 0.5],
 		},
 	];
-
 }
 
 impl crate::scene::Scene for BouncingCubeScene {
@@ -358,7 +355,10 @@ impl crate::scene::Scene for BouncingCubeScene {
 		device: &wgpu::Device,
 		surface_configuration: &wgpu::SurfaceConfiguration,
 	) {
-		self.bouncing_cube_model.resize(surface_configuration.width as f32, surface_configuration.height as f32);
+		self.bouncing_cube_model.resize(
+			surface_configuration.width as f32,
+			surface_configuration.height as f32,
+		);
 		self.depth_texture = crate::scene::utilities::texture::Texture::create_depth_texture(
 			device,
 			surface_configuration,
@@ -376,6 +376,44 @@ impl crate::scene::Scene for BouncingCubeScene {
 		queue: &wgpu::Queue,
 		output_texture_view: &wgpu::TextureView,
 	) {
-		// TODO:
+		queue.write_buffer(
+			&self.vertex_buffer,
+			0,
+			bytemuck::cast_slice(&Self::CUBE_VERTICES),
+		);
+		queue.write_buffer(
+			&self.render_camera_uniform_buffer,
+			0,
+			bytemuck::bytes_of(&self.bouncing_cube_model.scene_camera.transformation),
+		);
+		let mut render_pass = command_encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+			label: Some("Bouncing cube scene render pass"),
+			color_attachments: &[wgpu::RenderPassColorAttachment {
+				view: output_texture_view,
+				resolve_target: None,
+				ops: wgpu::Operations {
+					load: wgpu::LoadOp::Clear(wgpu::Color {
+						r: 0.5,
+						g: 0.5,
+						b: 0.5,
+						a: 1.0,
+					}),
+					store: true,
+				},
+			}],
+			depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachment {
+				view: &self.depth_texture.texture_view,
+				depth_ops: Some(wgpu::Operations {
+					load: wgpu::LoadOp::Clear(1.0),
+					store: true,
+				}),
+				stencil_ops: None,
+			}),
+		});
+		render_pass.set_pipeline(&self.render_pipeline);
+		render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
+		render_pass.set_index_buffer(self.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
+		render_pass.set_bind_group(0, &self.render_camera_bind_group, &[]);
+		render_pass.draw_indexed(0..36, 0, 0..1);
 	}
 }

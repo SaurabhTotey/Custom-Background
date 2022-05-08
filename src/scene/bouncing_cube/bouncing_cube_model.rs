@@ -51,7 +51,8 @@ impl BouncingCubeSceneInformation {
 			scene_bounds: [x_bound, y_bound, z_bound],
 			ambient_light: glam::Vec3A::X,
 			cube,
-			lights: [ // TODO: better way of setting the lights' initial positions
+			lights: [
+				// TODO: better way of setting the lights' initial positions
 				PointLightInformation {
 					position: glam::Vec3A::new(0.0, 0.5, -2.1),
 					diffuse_light: glam::Vec3A::new(1.0, 0.0, 0.0),
@@ -70,14 +71,15 @@ impl BouncingCubeSceneInformation {
 
 	pub fn resize(&mut self, width: f32, height: f32) {
 		self.scene_camera.aspect_ratio = width / height;
-		self.scene_camera.recalculate_transformation_and_view_planes();
+		self.scene_camera
+			.recalculate_transformation_and_view_planes();
 		self.scene_bounds[0] = self.scene_bounds[1] * self.scene_camera.aspect_ratio;
 		// TODO: here, it is possible for the cube to go out of bounds because the bounds change
 	}
 
 	pub fn update(&mut self, dt: f32) {
 		self.cube.rotation_angle += std::f32::consts::FRAC_PI_4 * dt;
-		self.cube.cube_center += self.cube.cube_velocity * dt;
+		//self.cube.cube_center += self.cube.cube_velocity * dt;
 		// TODO: handle collisions better
 		if self.cube.cube_center.x < -self.scene_bounds[0] {
 			// TODO:
