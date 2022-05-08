@@ -1,9 +1,10 @@
 use crate::scene::bouncing_cube::BouncingCubeScene;
+use crate::scene::hello_world_triangle::HelloWorldTriangleScene;
 use crate::scene::Scene;
 use winit::{
 	event::{Event, WindowEvent},
 	event_loop::{ControlFlow, EventLoop},
-	platform::unix::{WindowBuilderExtUnix, XWindowType},
+	//platform::unix::{WindowBuilderExtUnix, XWindowType},
 	window::{Window, WindowBuilder},
 };
 
@@ -30,8 +31,8 @@ impl DemoWindow {
 			let monitor_size = event_loop.primary_monitor().unwrap().size();
 			WindowBuilder::new()
 				.with_inner_size(monitor_size)
-				.with_x11_window_type(vec![XWindowType::Desktop])
-				.with_override_redirect(true)
+				//.with_x11_window_type(vec![XWindowType::Desktop])
+				//.with_override_redirect(true)
 				.build(event_loop)
 				.unwrap()
 		} else {
@@ -42,7 +43,7 @@ impl DemoWindow {
 		let window_size = window.inner_size();
 
 		// Create surface.
-		let instance = wgpu::Instance::new(wgpu::Backends::VULKAN);
+		let instance = wgpu::Instance::new(wgpu::Backends::all());
 		let surface = unsafe { instance.create_surface(&window) };
 
 		// Create the device and the queue.
@@ -77,7 +78,7 @@ impl DemoWindow {
 		surface.configure(&device, &surface_configuration);
 
 		// Make the scene
-		let scene = Box::new(BouncingCubeScene::new(&device, &surface_configuration));
+		let scene = Box::new(HelloWorldTriangleScene::new(&device, &surface_configuration));
 
 		Self {
 			window,
