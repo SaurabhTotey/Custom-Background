@@ -78,7 +78,7 @@ impl BouncingCubeSceneInformation {
 	}
 
 	pub fn update(&mut self, dt: f32) {
-		//self.cube.rotation_angle += std::f32::consts::FRAC_PI_4 * dt;
+		self.cube.rotation_angle += std::f32::consts::FRAC_PI_4 * dt;
 		//self.cube.cube_center += self.cube.cube_velocity * dt;
 		// TODO: handle collisions better
 		if self.cube.cube_center.x < -self.scene_bounds[0] {
