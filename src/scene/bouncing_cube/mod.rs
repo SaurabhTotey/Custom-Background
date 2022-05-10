@@ -300,26 +300,26 @@ impl BouncingCubeScene {
 
 	// Vertices for the walls in their own reference frame: all need to be transformed into world coordinates (only scaled).
 	const WALL_COORDINATES: [Vertex; 20] = [
-		// back wall
+		// back wall TODO: color is temporarily slightly different
 		Vertex {
 			position: [-1.0, -1.0, 1.0],
 			normal: [0.0, 0.0, -1.0],
-			color: [0.5, 0.5, 0.5],
+			color: [0.59, 0.59, 0.59],
 		},
 		Vertex {
 			position: [1.0, -1.0, 1.0],
 			normal: [0.0, 0.0, -1.0],
-			color: [0.5, 0.5, 0.5],
+			color: [0.59, 0.59, 0.59],
 		},
 		Vertex {
 			position: [1.0, 1.0, 1.0],
 			normal: [0.0, 0.0, -1.0],
-			color: [0.5, 0.5, 0.5],
+			color: [0.59, 0.59, 0.59],
 		},
 		Vertex {
 			position: [-1.0, 1.0, 1.0],
 			normal: [0.0, 0.0, -1.0],
-			color: [0.5, 0.5, 0.5],
+			color: [0.59, 0.59, 0.59],
 		},
 		// left wall
 		Vertex {

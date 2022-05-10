@@ -36,9 +36,9 @@ impl BouncingCubeSceneInformation {
 		let mut rng = rand::thread_rng();
 		let cube = CubeInformation {
 			cube_center: glam::Vec3A::new(
-				rng.gen_range(-x_bound + 0.1..x_bound - 0.1),
-				rng.gen_range(-y_bound + 0.1..y_bound - 0.1),
-				rng.gen_range(-0.9..0.9),
+				rng.gen_range(-x_bound + cube_semi_diagonal_length..x_bound - cube_semi_diagonal_length),
+				rng.gen_range(-y_bound + cube_semi_diagonal_length..y_bound - cube_semi_diagonal_length),
+				rng.gen_range(-z_bound + cube_semi_diagonal_length..z_bound - cube_semi_diagonal_length),
 			),
 			cube_size,
 			cube_velocity: rng.gen::<glam::Vec3A>().normalize() * 1.5,
