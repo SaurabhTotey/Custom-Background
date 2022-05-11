@@ -456,9 +456,9 @@ impl crate::scene::Scene for BouncingCubeScene {
 		let instance_dynamic_uniform_buffer_data = &std::iter::repeat(InstanceTransform {
 			matrix: glam::Mat4::from_scale_rotation_translation(
 				glam::Vec3::new(
-					self.bouncing_cube_model.cube.cube_size,
-					self.bouncing_cube_model.cube.cube_size,
-					self.bouncing_cube_model.cube.cube_size,
+					self.bouncing_cube_model.cube.cube_size / 2.0, // defined cube vertices give cube a side length of 2, not 1
+					self.bouncing_cube_model.cube.cube_size / 2.0,
+					self.bouncing_cube_model.cube.cube_size / 2.0,
 				),
 				glam::Quat::from_axis_angle(
 					self.bouncing_cube_model.cube.axis_of_rotation.into(),

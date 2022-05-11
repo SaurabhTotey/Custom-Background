@@ -36,9 +36,15 @@ impl BouncingCubeSceneInformation {
 		let mut rng = rand::thread_rng();
 		let cube = CubeInformation {
 			cube_center: glam::Vec3A::new(
-				rng.gen_range(-x_bound + cube_semi_diagonal_length..x_bound - cube_semi_diagonal_length),
-				rng.gen_range(-y_bound + cube_semi_diagonal_length..y_bound - cube_semi_diagonal_length),
-				rng.gen_range(-z_bound + cube_semi_diagonal_length..z_bound - cube_semi_diagonal_length),
+				rng.gen_range(
+					-x_bound + cube_semi_diagonal_length..x_bound - cube_semi_diagonal_length,
+				),
+				rng.gen_range(
+					-y_bound + cube_semi_diagonal_length..y_bound - cube_semi_diagonal_length,
+				),
+				rng.gen_range(
+					-z_bound + cube_semi_diagonal_length..z_bound - cube_semi_diagonal_length,
+				),
 			),
 			cube_size,
 			cube_velocity: rng.gen::<glam::Vec3A>().normalize() * 1.5,
@@ -79,25 +85,33 @@ impl BouncingCubeSceneInformation {
 
 	pub fn update(&mut self, dt: f32) {
 		self.cube.rotation_angle += std::f32::consts::FRAC_PI_4 * dt;
-		//self.cube.cube_center += self.cube.cube_velocity * dt;
-		// TODO: handle collisions better
-		if self.cube.cube_center.x < -self.scene_bounds[0] {
-			// TODO:
+		self.cube.cube_center += self.cube.cube_velocity * dt;
+		// TODO: do the math/physics and have more realistic collisions that affect the rotation -- the walls can only apply forces along their own normal on the touching/violating corners of the cube
+		let cube_semi_diagonal_length =
+			f32::sqrt(3.0 * (self.cube.cube_size / 2.0) * (self.cube.cube_size / 2.0));
+		if self.cube.cube_center.x - cube_semi_diagonal_length <= -self.scene_bounds[0] {
+			self.cube.cube_center.x = -self.scene_bounds[0] + cube_semi_diagonal_length;
+			self.cube.cube_velocity.x *= -1.0;
 		}
-		if self.cube.cube_center.x > self.scene_bounds[0] {
-			// TODO:
+		if self.cube.cube_center.x + cube_semi_diagonal_length >= self.scene_bounds[0] {
+			self.cube.cube_center.x = self.scene_bounds[0] - cube_semi_diagonal_length;
+			self.cube.cube_velocity.x *= -1.0;
 		}
-		if self.cube.cube_center.y < -self.scene_bounds[1] {
-			// TODO:
+		if self.cube.cube_center.y - cube_semi_diagonal_length <= -self.scene_bounds[1] {
+			self.cube.cube_center.y = -self.scene_bounds[1] + cube_semi_diagonal_length;
+			self.cube.cube_velocity.y *= -1.0;
 		}
-		if self.cube.cube_center.y > self.scene_bounds[1] {
-			// TODO:
+		if self.cube.cube_center.y + cube_semi_diagonal_length >= self.scene_bounds[1] {
+			self.cube.cube_center.y = self.scene_bounds[1] - cube_semi_diagonal_length;
+			self.cube.cube_velocity.y *= -1.0;
 		}
-		if self.cube.cube_center.z < -self.scene_bounds[2] {
-			// TODO:
+		if self.cube.cube_center.z - cube_semi_diagonal_length <= -self.scene_bounds[2] {
+			self.cube.cube_center.z = -self.scene_bounds[2] + cube_semi_diagonal_length;
+			self.cube.cube_velocity.z *= -1.0;
 		}
-		if self.cube.cube_center.z > self.scene_bounds[2] {
-			// TODO:
+		if self.cube.cube_center.z + cube_semi_diagonal_length >= self.scene_bounds[2] {
+			self.cube.cube_center.z = self.scene_bounds[2] - cube_semi_diagonal_length;
+			self.cube.cube_velocity.z *= -1.0;
 		}
 	}
 }
