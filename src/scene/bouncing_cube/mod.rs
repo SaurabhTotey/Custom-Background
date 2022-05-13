@@ -3,7 +3,6 @@ use wgpu::util::DeviceExt;
 
 /**
  * TODO:
- *  * transform the cube and add walls with their own transform (only transforms so far are camera)
  *  * point lights with cube shadows on wall
  *  * blinn-phong lighting
  */
