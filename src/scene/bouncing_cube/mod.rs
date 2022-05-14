@@ -118,7 +118,10 @@ impl BouncingCubeScene {
 					&render_camera_bind_group_layout,
 					&instance_bind_group_layout,
 				],
-				push_constant_ranges: &[],
+				push_constant_ranges: &[wgpu::PushConstantRange {
+					stages: wgpu::ShaderStages::FRAGMENT,
+					range: 0..12, // 12 bytes for a vector of 3 floats (and each float is 4 bytes)
+				}],
 			});
 		let render_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
 			label: Some("Bouncing cube scene pipeline"),
@@ -512,6 +515,11 @@ impl crate::scene::Scene for BouncingCubeScene {
 		render_pass.set_pipeline(&self.render_pipeline);
 		render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
 		render_pass.set_index_buffer(self.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
+		render_pass.set_push_constants(
+			wgpu::ShaderStages::FRAGMENT,
+			0,
+			bytemuck::bytes_of(&glam::Vec3::from(self.bouncing_cube_model.ambient_light)),
+		);
 		render_pass.set_bind_group(0, &self.render_camera_bind_group, &[]);
 		for i in 0u32..11 {
 			let offset =

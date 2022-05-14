@@ -58,8 +58,11 @@ impl DemoWindow {
 			.request_device(
 				&wgpu::DeviceDescriptor {
 					label: Some("Default device"),
-					features: wgpu::Features::empty(),
-					limits: wgpu::Limits::default(),
+					features: wgpu::Features::PUSH_CONSTANTS,
+					limits: wgpu::Limits {
+						max_push_constant_size: 16,
+						..wgpu::Limits::default()
+					}, // TODO: 16 bytes as the max size is hardcoded, but should be derived from something the scene would request or something
 				},
 				None,
 			)

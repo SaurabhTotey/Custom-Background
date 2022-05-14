@@ -55,7 +55,7 @@ impl BouncingCubeSceneInformation {
 			window_size: [width, height],
 			scene_camera,
 			scene_bounds: [x_bound, y_bound, z_bound],
-			ambient_light: glam::Vec3A::X,
+			ambient_light: glam::Vec3A::new(0.1, 0.1, 0.1),
 			cube,
 			lights: [
 				// TODO: better way of setting the lights' initial positions
@@ -87,7 +87,10 @@ impl BouncingCubeSceneInformation {
 		self.cube.rotation_angle += std::f32::consts::FRAC_PI_4 * dt;
 		self.cube.center += self.cube.velocity * dt;
 		let light_rotation_matrix = glam::Mat4::from_rotation_z(std::f32::consts::FRAC_PI_4 * dt);
-		self.lights.iter_mut().for_each(|light| { light.position = glam::Vec3A::from(light_rotation_matrix * glam::Vec4::from((light.position, 1.0))); });
+		self.lights.iter_mut().for_each(|light| {
+			light.position =
+				glam::Vec3A::from(light_rotation_matrix * glam::Vec4::from((light.position, 1.0)));
+		});
 		// TODO: do the math/physics and have more realistic collisions that affect the rotation -- the walls can only apply forces along their own normal on the touching/violating corners of the cube
 		let cube_semi_diagonal_length =
 			f32::sqrt(3.0 * (self.cube.size / 2.0) * (self.cube.size / 2.0));

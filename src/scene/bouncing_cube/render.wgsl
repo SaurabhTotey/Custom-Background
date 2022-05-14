@@ -12,6 +12,8 @@ var<uniform> camera_transform: Transform;
 [[group(1), binding(0)]]
 var<uniform> object_transform: Transform;
 
+var<push_constant> ambient_light: vec3<f32>;
+
 struct FragmentInput {
 	[[builtin(position)]] clip_position: vec4<f32>;
 	[[location(0)]] world_position: vec4<f32>;
@@ -35,5 +37,5 @@ fn vertex_stage(input: VertexInput) -> FragmentInput {
 
 [[stage(fragment)]]
 fn fragment_stage(input: FragmentInput) -> FragmentOutput {
-	return FragmentOutput(input.color);
+	return FragmentOutput(vec4<f32>(ambient_light, 1.0) * input.color);
 }
