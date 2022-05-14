@@ -21,6 +21,13 @@ struct InstanceTransform {
 	matrix: [[f32; 4]; 4],
 }
 
+#[repr(C)]
+#[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
+struct LightInformationDatum {
+	position: [f32; 3],
+	diffuse_color: [f32; 3],
+}
+
 pub struct BouncingCubeScene {
 	bouncing_cube_model: bouncing_cube_model::BouncingCubeSceneInformation,
 	render_pipeline: wgpu::RenderPipeline,
@@ -31,6 +38,8 @@ pub struct BouncingCubeScene {
 	instance_dynamic_uniform_buffer: wgpu::Buffer,
 	instance_bind_group: wgpu::BindGroup,
 	instance_buffer_spacing: wgpu::BufferAddress,
+	light_information_buffer: wgpu::Buffer,
+	light_information_bind_group: wgpu::BindGroup,
 	depth_texture: crate::scene::utilities::texture::Texture,
 }
 
@@ -73,6 +82,8 @@ impl BouncingCubeScene {
 			surface_configuration,
 			"Bouncing cube scene",
 		);
+
+		// Create dynamic uniform buffer for instance data.
 		let instance_buffer_spacing =
 			device.limits().min_uniform_buffer_offset_alignment as wgpu::BufferAddress;
 		let instance_dynamic_uniform_buffer = device.create_buffer(&wgpu::BufferDescriptor {
@@ -110,6 +121,36 @@ impl BouncingCubeScene {
 			}],
 		});
 
+		// Create uniform buffer for light information.
+		let light_information_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+			label: Some("Boucning cube scene light information uniform buffer"),
+			size: 3 * std::mem::size_of::<LightInformationDatum>() as wgpu::BufferAddress,
+			usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::UNIFORM,
+			mapped_at_creation: false,
+		});
+		let light_information_bind_group_layout =
+			device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+				label: Some("Bouncing cube scene light information bind group layout"),
+				entries: &[wgpu::BindGroupLayoutEntry {
+					binding: 0,
+					visibility: wgpu::ShaderStages::FRAGMENT,
+					ty: wgpu::BindingType::Buffer {
+						ty: wgpu::BufferBindingType::Uniform,
+						has_dynamic_offset: false,
+						min_binding_size: None,
+					},
+					count: None,
+				}],
+			});
+		let light_information_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+			label: Some("Bouncing cube scene light information bind group"),
+			layout: &light_information_bind_group_layout,
+			entries: &[wgpu::BindGroupEntry {
+				binding: 0,
+				resource: light_information_buffer.as_entire_binding(),
+			}],
+		});
+
 		// Create pipeline layout and pipeline.
 		let render_pipeline_layout =
 			device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
@@ -117,6 +158,7 @@ impl BouncingCubeScene {
 				bind_group_layouts: &[
 					&render_camera_bind_group_layout,
 					&instance_bind_group_layout,
+					&light_information_bind_group_layout,
 				],
 				push_constant_ranges: &[wgpu::PushConstantRange {
 					stages: wgpu::ShaderStages::FRAGMENT,
@@ -166,6 +208,8 @@ impl BouncingCubeScene {
 			instance_dynamic_uniform_buffer,
 			instance_bind_group,
 			instance_buffer_spacing,
+			light_information_buffer,
+			light_information_bind_group,
 			depth_texture,
 		}
 	}
@@ -487,6 +531,21 @@ impl crate::scene::Scene for BouncingCubeScene {
 				instance_dynamic_uniform_buffer_data.len() * self.instance_buffer_spacing as usize,
 			)
 		});
+		queue.write_buffer(
+			&self.light_information_buffer,
+			0,
+			bytemuck::cast_slice(
+				&self
+					.bouncing_cube_model
+					.lights
+					.iter()
+					.map(|light| LightInformationDatum {
+						position: light.position.into(),
+						diffuse_color: light.diffuse_light.into(),
+					})
+					.collect::<Vec<_>>(),
+			),
+		);
 
 		let mut render_pass = command_encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
 			label: Some("Bouncing cube scene render pass"),
@@ -521,6 +580,7 @@ impl crate::scene::Scene for BouncingCubeScene {
 			bytemuck::bytes_of(&glam::Vec3::from(self.bouncing_cube_model.ambient_light)),
 		);
 		render_pass.set_bind_group(0, &self.render_camera_bind_group, &[]);
+		render_pass.set_bind_group(2, &self.light_information_bind_group, &[]);
 		for i in 0u32..11 {
 			let offset =
 				i as wgpu::DynamicOffset * self.instance_buffer_spacing as wgpu::DynamicOffset;
