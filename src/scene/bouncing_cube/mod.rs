@@ -25,7 +25,9 @@ struct InstanceTransform {
 #[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
 struct LightInformationDatum {
 	position: [f32; 3],
+	_padding_0: u32,
 	diffuse_color: [f32; 3],
+	_padding_1: u32,
 }
 
 pub struct BouncingCubeScene {
@@ -592,7 +594,9 @@ impl crate::scene::Scene for BouncingCubeScene {
 					.iter()
 					.map(|light| LightInformationDatum {
 						position: light.position.into(),
+						_padding_0: 0,
 						diffuse_color: light.diffuse_light.into(),
+						_padding_1: 0,
 					})
 					.collect::<Vec<_>>(),
 			),

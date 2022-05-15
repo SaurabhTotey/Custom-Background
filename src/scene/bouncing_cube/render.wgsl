@@ -49,7 +49,22 @@ fn vertex_stage(input: VertexInput) -> FragmentInput {
 	);
 }
 
+fn calculate_light_contribution(light: LightInformationDatum, normal: vec3<f32>, world_position: vec3<f32>) -> vec3<f32> {
+	let constant_attenuation_term = 1.0; // TODO: attenuation terms should maybe be push constants too
+	let linear_attenuation_term = 0.7;
+	let quadratic_attenuation_term = 1.8;
+	let distance_to_light = length(light.world_position - world_position);
+	let light_direction = normalize(light.world_position - world_position);
+	let diffuse_amount = max(0.0, dot(normal, light_direction));
+	let attenuation = 1.0 / (constant_attenuation_term + distance_to_light * linear_attenuation_term + distance_to_light * distance_to_light * quadratic_attenuation_term);
+	return attenuation * (ambient_light + diffuse_amount * light.color);
+}
+
 [[stage(fragment)]]
 fn fragment_stage(input: FragmentInput) -> FragmentOutput {
-	return FragmentOutput(vec4<f32>(ambient_light, 1.0) * input.color);
+	var color = vec3<f32>(0.0);
+	for (var i = 0; i < 3; i = i + 1) {
+		color = color + input.color.rgb * calculate_light_contribution(light_information.i[i], input.normal.xyz, input.world_position.xyz);
+	}
+	return FragmentOutput(vec4<f32>(color, 1.0));
 }
