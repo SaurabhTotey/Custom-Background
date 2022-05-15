@@ -35,7 +35,8 @@ pub struct BouncingCubeScene {
 	index_buffer: wgpu::Buffer,
 	render_camera_uniform_buffer: wgpu::Buffer,
 	render_camera_bind_group: wgpu::BindGroup,
-	instance_dynamic_uniform_buffer: wgpu::Buffer,
+	instance_model_dynamic_uniform_buffer: wgpu::Buffer,
+	instance_normal_dynamic_uniform_buffer: wgpu::Buffer,
 	instance_bind_group: wgpu::BindGroup,
 	instance_buffer_spacing: wgpu::BufferAddress,
 	light_information_buffer: wgpu::Buffer,
@@ -86,39 +87,70 @@ impl BouncingCubeScene {
 		// Create dynamic uniform buffer for instance data.
 		let instance_buffer_spacing =
 			device.limits().min_uniform_buffer_offset_alignment as wgpu::BufferAddress;
-		let instance_dynamic_uniform_buffer = device.create_buffer(&wgpu::BufferDescriptor {
-			label: Some("Bouncing cube scene instance dynamic uniform buffer"),
+		let instance_model_dynamic_uniform_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+			label: Some("Bouncing cube scene instance model dynamic uniform buffer"),
 			size: 11 * instance_buffer_spacing, // 11 quads each with their own transform
 			usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::UNIFORM,
 			mapped_at_creation: false,
 		});
+		let instance_normal_dynamic_uniform_buffer =
+			device.create_buffer(&wgpu::BufferDescriptor {
+				label: Some("Bouncing cube scene instance normal dynamic uniform buffer"),
+				size: 11 * instance_buffer_spacing,
+				usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::UNIFORM,
+				mapped_at_creation: false,
+			});
 		let instance_bind_group_layout =
 			device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
 				label: Some("Bouncing cube scene instance bind group layout"),
-				entries: &[wgpu::BindGroupLayoutEntry {
-					binding: 0,
-					visibility: wgpu::ShaderStages::VERTEX,
-					ty: wgpu::BindingType::Buffer {
-						ty: wgpu::BufferBindingType::Uniform,
-						has_dynamic_offset: true,
-						min_binding_size: wgpu::BufferSize::new(
-							std::mem::size_of::<InstanceTransform>() as _,
-						),
+				entries: &[
+					wgpu::BindGroupLayoutEntry {
+						binding: 0,
+						visibility: wgpu::ShaderStages::VERTEX,
+						ty: wgpu::BindingType::Buffer {
+							ty: wgpu::BufferBindingType::Uniform,
+							has_dynamic_offset: true,
+							min_binding_size: wgpu::BufferSize::new(std::mem::size_of::<
+								InstanceTransform,
+							>() as _),
+						},
+						count: None,
 					},
-					count: None,
-				}],
+					wgpu::BindGroupLayoutEntry {
+						binding: 1,
+						visibility: wgpu::ShaderStages::VERTEX,
+						ty: wgpu::BindingType::Buffer {
+							ty: wgpu::BufferBindingType::Uniform,
+							has_dynamic_offset: true,
+							min_binding_size: wgpu::BufferSize::new(std::mem::size_of::<
+								InstanceTransform,
+							>() as _),
+						},
+						count: None,
+					},
+				],
 			});
 		let instance_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
 			label: Some("Bouncing cube scene instance bind group"),
 			layout: &instance_bind_group_layout,
-			entries: &[wgpu::BindGroupEntry {
-				binding: 0,
-				resource: wgpu::BindingResource::Buffer(wgpu::BufferBinding {
-					buffer: &instance_dynamic_uniform_buffer,
-					offset: 0,
-					size: wgpu::BufferSize::new(std::mem::size_of::<InstanceTransform>() as _),
-				}),
-			}],
+			entries: &[
+				wgpu::BindGroupEntry {
+					binding: 0,
+					resource: wgpu::BindingResource::Buffer(wgpu::BufferBinding {
+						buffer: &instance_model_dynamic_uniform_buffer,
+						offset: 0,
+						size: wgpu::BufferSize::new(std::mem::size_of::<InstanceTransform>() as _),
+					}),
+				},
+				wgpu::BindGroupEntry {
+					binding: 1,
+					resource: wgpu::BindingResource::Buffer(wgpu::BufferBinding {
+						buffer: &instance_normal_dynamic_uniform_buffer,
+						offset: 0,
+						size: wgpu::BufferSize::new(std::mem::size_of::<InstanceTransform>() as _),
+					}),
+				},
+			],
 		});
 
 		// Create uniform buffer for light information.
@@ -205,7 +237,8 @@ impl BouncingCubeScene {
 			index_buffer,
 			render_camera_uniform_buffer,
 			render_camera_bind_group,
-			instance_dynamic_uniform_buffer,
+			instance_model_dynamic_uniform_buffer,
+			instance_normal_dynamic_uniform_buffer,
 			instance_bind_group,
 			instance_buffer_spacing,
 			light_information_buffer,
@@ -499,8 +532,8 @@ impl crate::scene::Scene for BouncingCubeScene {
 			0,
 			bytemuck::bytes_of(&self.bouncing_cube_model.scene_camera.transformation),
 		);
-		let instance_dynamic_uniform_buffer_data = &std::iter::repeat(InstanceTransform {
-			matrix: glam::Mat4::from_scale_rotation_translation(
+		let instance_model_transforms =
+			std::iter::repeat(glam::Mat4::from_scale_rotation_translation(
 				glam::Vec3::new(
 					self.bouncing_cube_model.cube.size / 2.0, // defined cube vertices give cube a side length of 2, not 1
 					self.bouncing_cube_model.cube.size / 2.0,
@@ -511,24 +544,42 @@ impl crate::scene::Scene for BouncingCubeScene {
 					self.bouncing_cube_model.cube.rotation_angle,
 				),
 				self.bouncing_cube_model.cube.center.into(),
-			)
-			.to_cols_array_2d(),
-		})
-		.take(6)
-		.chain(
-			std::iter::repeat(InstanceTransform {
-				matrix: glam::Mat4::from_scale(glam::Vec3::from_slice(
+			))
+			.take(6)
+			.chain(
+				std::iter::repeat(glam::Mat4::from_scale(glam::Vec3::from_slice(
 					&self.bouncing_cube_model.scene_bounds,
-				))
+				)))
+				.take(5),
+			)
+			.collect::<Vec<_>>();
+		let instance_model_dynamic_uniform_buffer_data = &instance_model_transforms
+			.iter()
+			.map(|matrix| InstanceTransform {
+				matrix: matrix.to_cols_array_2d(),
+			})
+			.collect::<Vec<_>>();
+		let instance_normal_dynamic_uniform_buffer_data = &instance_model_transforms
+			.iter()
+			.map(|matrix| InstanceTransform {
+				matrix: glam::Mat4::from_mat3(
+					glam::Mat3A::from_mat4(*matrix).inverse().transpose().into(),
+				)
 				.to_cols_array_2d(),
 			})
-			.take(5),
-		)
-		.collect::<Vec<_>>();
-		queue.write_buffer(&self.instance_dynamic_uniform_buffer, 0, unsafe {
+			.collect::<Vec<_>>();
+		queue.write_buffer(&self.instance_model_dynamic_uniform_buffer, 0, unsafe {
 			std::slice::from_raw_parts(
-				instance_dynamic_uniform_buffer_data.as_ptr() as *const u8,
-				instance_dynamic_uniform_buffer_data.len() * self.instance_buffer_spacing as usize,
+				instance_model_dynamic_uniform_buffer_data.as_ptr() as *const u8,
+				instance_model_dynamic_uniform_buffer_data.len()
+					* self.instance_buffer_spacing as usize,
+			)
+		});
+		queue.write_buffer(&self.instance_normal_dynamic_uniform_buffer, 0, unsafe {
+			std::slice::from_raw_parts(
+				instance_normal_dynamic_uniform_buffer_data.as_ptr() as *const u8,
+				instance_normal_dynamic_uniform_buffer_data.len()
+					* self.instance_buffer_spacing as usize,
 			)
 		});
 		queue.write_buffer(
@@ -584,7 +635,7 @@ impl crate::scene::Scene for BouncingCubeScene {
 		for i in 0u32..11 {
 			let offset =
 				i as wgpu::DynamicOffset * self.instance_buffer_spacing as wgpu::DynamicOffset;
-			render_pass.set_bind_group(1, &self.instance_bind_group, &[offset]);
+			render_pass.set_bind_group(1, &self.instance_bind_group, &[offset, offset]);
 			render_pass.draw_indexed(6 * i..6 * i + 6, 0, 0..1);
 		}
 	}

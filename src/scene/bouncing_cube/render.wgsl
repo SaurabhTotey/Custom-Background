@@ -11,6 +11,8 @@ struct Transform {
 var<uniform> camera_transform: Transform;
 [[group(1), binding(0)]]
 var<uniform> object_transform: Transform;
+[[group(1), binding(1)]]
+var<uniform> normal_transform: Transform;
 
 struct FragmentInput {
 	[[builtin(position)]] clip_position: vec4<f32>;
@@ -42,7 +44,7 @@ fn vertex_stage(input: VertexInput) -> FragmentInput {
 	return FragmentInput(
 		camera_transform.transformation * world_position,
 		world_position,
-		vec4<f32>(input.normal, 0.0),
+		normal_transform.transformation * vec4<f32>(input.normal, 1.0),
 		vec4<f32>(input.color, 1.0),
 	);
 }
