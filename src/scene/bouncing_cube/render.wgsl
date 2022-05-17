@@ -29,8 +29,14 @@ struct LightInformationDatum {
 struct LightInformation {
 	i: array<LightInformationDatum, 3>;
 };
+struct SceneLightInformation {
+	ambient_light: vec3<f32>;
+	constant_attenuation: f32;
+	linear_attenuation: f32;
+	quadratic_attenuation: f32;
+};
 
-var<push_constant> ambient_light: vec3<f32>;
+var<push_constant> scene_light_information: SceneLightInformation;
 [[group(2), binding(0)]]
 var<uniform> light_information: LightInformation;
 
@@ -50,14 +56,11 @@ fn vertex_stage(input: VertexInput) -> FragmentInput {
 }
 
 fn calculate_light_contribution(light: LightInformationDatum, normal: vec3<f32>, world_position: vec3<f32>) -> vec3<f32> {
-	let constant_attenuation_term = 1.0; // TODO: attenuation terms should maybe be push constants too
-	let linear_attenuation_term = 0.7;
-	let quadratic_attenuation_term = 1.8;
 	let distance_to_light = length(light.world_position - world_position);
 	let light_direction = normalize(light.world_position - world_position);
 	let diffuse_amount = max(0.0, dot(normal, light_direction));
-	let attenuation = 1.0 / (constant_attenuation_term + distance_to_light * linear_attenuation_term + distance_to_light * distance_to_light * quadratic_attenuation_term);
-	return attenuation * (ambient_light + diffuse_amount * light.color);
+	let attenuation = 1.0 / (scene_light_information.constant_attenuation + distance_to_light * scene_light_information.linear_attenuation + distance_to_light * distance_to_light * scene_light_information.quadratic_attenuation);
+	return attenuation * (scene_light_information.ambient_light + diffuse_amount * light.color);
 }
 
 [[stage(fragment)]]

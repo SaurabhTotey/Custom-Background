@@ -23,6 +23,15 @@ struct InstanceTransform {
 
 #[repr(C)]
 #[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
+struct SceneLightInformation {
+	ambient_light: [f32; 3],
+	constant_attenuation: f32,
+	linear_attenuation: f32,
+	quadratic_attenuation: f32,
+}
+
+#[repr(C)]
+#[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
 struct LightInformationDatum {
 	position: [f32; 3],
 	_padding_0: u32,
@@ -196,7 +205,7 @@ impl BouncingCubeScene {
 				],
 				push_constant_ranges: &[wgpu::PushConstantRange {
 					stages: wgpu::ShaderStages::FRAGMENT,
-					range: 0..12, // 12 bytes for a vector of 3 floats (and each float is 4 bytes)
+					range: 0..28, // 12 bytes for a vector of 3 floats (and each float is 4 bytes)
 				}],
 			});
 		let render_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
@@ -632,7 +641,12 @@ impl crate::scene::Scene for BouncingCubeScene {
 		render_pass.set_push_constants(
 			wgpu::ShaderStages::FRAGMENT,
 			0,
-			bytemuck::bytes_of(&glam::Vec3::from(self.bouncing_cube_model.ambient_light)),
+			bytemuck::bytes_of(&SceneLightInformation {
+				ambient_light: self.bouncing_cube_model.ambient_light.into(),
+				constant_attenuation: 1.0,
+				linear_attenuation: 0.7,
+				quadratic_attenuation: 1.8,
+			}),
 		);
 		render_pass.set_bind_group(0, &self.render_camera_bind_group, &[]);
 		render_pass.set_bind_group(2, &self.light_information_bind_group, &[]);
