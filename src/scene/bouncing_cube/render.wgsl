@@ -74,7 +74,7 @@ fn fragment_stage(input: FragmentInput) -> FragmentOutput {
 		color = color + input.color.rgb * calculate_light_contribution(light_information.i[i], input.normal.xyz, input.world_position.xyz);
 		// TODO: Temporary code to visualize light positions to figure out why one light is brighter than the rest on the back wall.
 		if (approx_equals(input.world_position.x, light_information.i[i].world_position.x) && approx_equals(input.world_position.y, light_information.i[i].world_position.y)) {
-			return FragmentOutput(vec4<f32>(1.0));
+			return FragmentOutput(vec4<f32>(light_information.i[i].color, 1.0));
 		}
 	}
 	return FragmentOutput(vec4<f32>(color, 1.0));
