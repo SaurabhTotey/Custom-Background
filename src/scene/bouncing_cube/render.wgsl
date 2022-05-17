@@ -63,11 +63,19 @@ fn calculate_light_contribution(light: LightInformationDatum, normal: vec3<f32>,
 	return attenuation * (scene_light_information.ambient_light + diffuse_amount * light.color);
 }
 
+fn approx_equals(a: f32, b: f32) -> bool {
+	return a - 0.01 < b && a + 0.01 > b;
+}
+
 [[stage(fragment)]]
 fn fragment_stage(input: FragmentInput) -> FragmentOutput {
 	var color = vec3<f32>(0.0);
 	for (var i = 0; i < 3; i = i + 1) {
 		color = color + input.color.rgb * calculate_light_contribution(light_information.i[i], input.normal.xyz, input.world_position.xyz);
+		// TODO: Temporary code to visualize light positions to figure out why one light is brighter than the rest on the back wall.
+		if (approx_equals(input.world_position.x, light_information.i[i].world_position.x) && approx_equals(input.world_position.y, light_information.i[i].world_position.y)) {
+			return FragmentOutput(vec4<f32>(1.0));
+		}
 	}
 	return FragmentOutput(vec4<f32>(color, 1.0));
 }

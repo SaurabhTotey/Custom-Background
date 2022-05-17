@@ -6,6 +6,8 @@ pub struct BouncingCubeSceneInformation {
 	pub scene_bounds: [f32; 3],
 	pub ambient_light: glam::Vec3A,
 	pub cube: CubeInformation,
+	pub point_light_distance_from_center: f32,
+	pub point_light_rotation_angle: f32,
 	pub lights: [PointLightInformation; 3],
 }
 
@@ -51,24 +53,42 @@ impl BouncingCubeSceneInformation {
 			rotation_angle: rng.gen_range(0.0..2.0 * std::f32::consts::PI),
 			axis_of_rotation: rng.gen::<glam::Vec3A>().normalize(),
 		};
+		let point_light_distance_from_center = y_bound.min(x_bound) / 3.0;
 		Self {
 			window_size: [width, height],
 			scene_camera,
 			scene_bounds: [x_bound, y_bound, z_bound],
 			ambient_light: glam::Vec3A::new(0.1, 0.1, 0.1),
 			cube,
+			point_light_distance_from_center,
+			point_light_rotation_angle: 0.0,
 			lights: [
-				// TODO: better way of setting the lights' initial positions
 				PointLightInformation {
-					position: glam::Vec3A::new(0.0, 0.5, -2.1),
+					position: glam::Vec3A::new(
+						point_light_distance_from_center * 0f32.cos(),
+						point_light_distance_from_center * 0f32.sin(),
+						-2.1,
+					),
 					diffuse_light: glam::Vec3A::new(1.0, 0.0, 0.0),
 				},
 				PointLightInformation {
-					position: glam::Vec3A::new(-0.5, 0.0, -2.1),
+					position: glam::Vec3A::new(
+						point_light_distance_from_center
+							* (2.0 * std::f32::consts::FRAC_PI_3).cos(),
+						point_light_distance_from_center
+							* (2.0 * std::f32::consts::FRAC_PI_3).sin(),
+						-2.1,
+					),
 					diffuse_light: glam::Vec3A::new(0.0, 1.0, 0.0),
 				},
 				PointLightInformation {
-					position: glam::Vec3A::new(0.5, 0.0, -2.1),
+					position: glam::Vec3A::new(
+						point_light_distance_from_center
+							* (4.0 * std::f32::consts::FRAC_PI_3).cos(),
+						point_light_distance_from_center
+							* (4.0 * std::f32::consts::FRAC_PI_3).sin(),
+						-2.1,
+					),
 					diffuse_light: glam::Vec3A::new(0.0, 0.0, 1.0),
 				},
 			],
@@ -80,16 +100,22 @@ impl BouncingCubeSceneInformation {
 		self.scene_camera
 			.recalculate_transformation_and_view_planes();
 		self.scene_bounds[0] = self.scene_bounds[1] * self.scene_camera.aspect_ratio;
+		self.point_light_distance_from_center =
+			self.scene_bounds[1].min(self.scene_bounds[0]) / 3.0;
 		// TODO: here, it is possible for the cube to go out of bounds because the bounds change
 	}
 
 	pub fn update(&mut self, dt: f32) {
 		self.cube.rotation_angle += std::f32::consts::FRAC_PI_4 * dt;
+		self.point_light_rotation_angle += std::f32::consts::FRAC_PI_2 * dt;
 		self.cube.center += self.cube.velocity * dt;
-		let light_rotation_matrix = glam::Mat4::from_rotation_z(std::f32::consts::FRAC_PI_4 * dt);
-		self.lights.iter_mut().for_each(|light| {
-			light.position =
-				glam::Vec3A::from(light_rotation_matrix * glam::Vec4::from((light.position, 1.0)));
+		(0..self.lights.len()).for_each(|light_index| {
+			let relative_angle = 2.0 * light_index as f32 * std::f32::consts::FRAC_PI_3;
+			let absolute_angle = self.point_light_rotation_angle + relative_angle;
+			self.lights[light_index].position.x =
+				self.point_light_distance_from_center * absolute_angle.cos();
+			self.lights[light_index].position.y =
+				self.point_light_distance_from_center * absolute_angle.sin();
 		});
 		// TODO: do the math/physics and have more realistic collisions that affect the rotation -- the walls can only apply forces along their own normal on the touching/violating corners of the cube
 		let cube_semi_diagonal_length =
