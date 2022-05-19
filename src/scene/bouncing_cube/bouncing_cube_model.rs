@@ -18,7 +18,7 @@ pub struct PointLightInformation {
 
 pub struct CubeInformation {
 	pub center: glam::Vec3A,
-	pub size: f32,
+	pub side_length: f32,
 	pub velocity: glam::Vec3A,
 	pub rotation_angle: f32,
 	pub axis_of_rotation: glam::Vec3A,
@@ -33,8 +33,8 @@ impl BouncingCubeSceneInformation {
 		let y_bound = (field_of_view / 2.0).tan() * (-1.0 - scene_camera.position.z);
 		let x_bound = y_bound * aspect_ratio;
 		let z_bound = 1.0;
-		let size = 0.1;
-		let cube_semi_diagonal_length = f32::sqrt(3.0 * (size / 2.0) * (size / 2.0));
+		let side_length = 0.1;
+		let cube_semi_diagonal_length = f32::sqrt(3.0 * (side_length / 2.0) * (side_length / 2.0));
 		let mut rng = rand::thread_rng();
 		let cube = CubeInformation {
 			center: glam::Vec3A::new(
@@ -48,7 +48,7 @@ impl BouncingCubeSceneInformation {
 					-z_bound + cube_semi_diagonal_length..z_bound - cube_semi_diagonal_length,
 				),
 			),
-			size,
+			side_length,
 			velocity: rng.gen::<glam::Vec3A>().normalize() * 1.5,
 			rotation_angle: rng.gen_range(0.0..2.0 * std::f32::consts::PI),
 			axis_of_rotation: rng.gen::<glam::Vec3A>().normalize(),
@@ -119,7 +119,7 @@ impl BouncingCubeSceneInformation {
 		});
 		// TODO: do the math/physics and have more realistic collisions that affect the rotation -- the walls can only apply forces along their own normal on the touching/violating corners of the cube
 		let cube_semi_diagonal_length =
-			f32::sqrt(3.0 * (self.cube.size / 2.0) * (self.cube.size / 2.0));
+			f32::sqrt(3.0 * (self.cube.side_length / 2.0) * (self.cube.side_length / 2.0));
 		if self.cube.center.x - cube_semi_diagonal_length <= -self.scene_bounds[0] {
 			self.cube.center.x = -self.scene_bounds[0] + cube_semi_diagonal_length;
 			self.cube.velocity.x *= -1.0;
