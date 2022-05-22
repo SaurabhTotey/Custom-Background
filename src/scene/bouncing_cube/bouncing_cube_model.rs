@@ -69,7 +69,7 @@ impl BouncingCubeSceneInformation {
 						point_light_distance_from_center * 0f32.sin(),
 						-2.1,
 					),
-					diffuse_light: glam::Vec3A::new(1.0, 0.0, 0.0),
+					diffuse_light: glam::Vec3A::new(1.0, 0.1, 0.1),
 				},
 				PointLightInformation {
 					position: glam::Vec3A::new(
@@ -79,7 +79,7 @@ impl BouncingCubeSceneInformation {
 							* (2.0 * std::f32::consts::FRAC_PI_3).sin(),
 						-2.1,
 					),
-					diffuse_light: glam::Vec3A::new(0.0, 1.0, 0.0),
+					diffuse_light: glam::Vec3A::new(0.1, 1.0, 0.1),
 				},
 				PointLightInformation {
 					position: glam::Vec3A::new(
@@ -89,7 +89,7 @@ impl BouncingCubeSceneInformation {
 							* (4.0 * std::f32::consts::FRAC_PI_3).sin(),
 						-2.1,
 					),
-					diffuse_light: glam::Vec3A::new(0.0, 0.0, 1.0),
+					diffuse_light: glam::Vec3A::new(0.1, 0.1, 1.0),
 				},
 			],
 		}
