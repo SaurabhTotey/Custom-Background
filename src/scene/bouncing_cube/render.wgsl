@@ -80,10 +80,6 @@ fn calculate_light_contribution(light: LightInformationDatum, normal: vec3<f32>,
 	return attenuation * (scene_light_information.ambient_light + diffuse_amount * light.color);
 }
 
-fn approx_equals(a: f32, b: f32) -> bool {
-	return a - 0.01 < b && a + 0.01 > b;
-}
-
 [[stage(fragment)]]
 fn fragment_stage(input: FragmentInput) -> FragmentOutput {
 	var color = vec3<f32>(0.0);
