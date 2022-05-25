@@ -3,6 +3,7 @@ use wgpu::util::DeviceExt;
 
 /**
  * TODO:
+ *  * move light attenuation information into the model (is attenuation a global parameter, or does it depend per light?)
  *  * blinn-phong lighting
  *  * shadow mapping for point lights
  */
