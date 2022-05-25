@@ -1,7 +1,16 @@
 struct VertexInput {
-	[[location(0)]] position: vec3<f32>;
-	[[location(1)]] normal: vec3<f32>;
-	[[location(2)]] color: vec3<f32>;
+	[[location(0)]] position: vec2<f32>;
+};
+struct InstanceInput {
+	[[location(1)]] color: vec3<f32>;
+	[[location(2)]] object_transform_col_0: vec4<f32>;
+	[[location(3)]] object_transform_col_1: vec4<f32>;
+	[[location(4)]] object_transform_col_2: vec4<f32>;
+	[[location(5)]] object_transform_col_3: vec4<f32>;
+	[[location(6)]] normal_transform_col_0: vec4<f32>;
+	[[location(7)]] normal_transform_col_1: vec4<f32>;
+	[[location(8)]] normal_transform_col_2: vec4<f32>;
+	[[location(9)]] normal_transform_col_3: vec4<f32>;
 };
 
 struct Transform {
@@ -9,10 +18,6 @@ struct Transform {
 };
 [[group(0), binding(0)]]
 var<uniform> camera_transform: Transform;
-[[group(1), binding(0)]]
-var<uniform> object_transform: Transform;
-[[group(1), binding(1)]]
-var<uniform> normal_transform: Transform;
 
 struct FragmentInput {
 	[[builtin(position)]] clip_position: vec4<f32>;
@@ -37,7 +42,7 @@ struct SceneLightInformation {
 };
 
 var<push_constant> scene_light_information: SceneLightInformation;
-[[group(2), binding(0)]]
+[[group(1), binding(0)]]
 var<uniform> light_information: LightInformation;
 
 struct FragmentOutput {
@@ -45,13 +50,25 @@ struct FragmentOutput {
 };
 
 [[stage(vertex)]]
-fn vertex_stage(input: VertexInput) -> FragmentInput {
-	let world_position = object_transform.transformation * vec4<f32>(input.position, 1.0);
+fn vertex_stage(vertex: VertexInput, instance: InstanceInput) -> FragmentInput {
+	let object_transform = mat4x4<f32>(
+		instance.object_transform_col_0,
+		instance.object_transform_col_1,
+		instance.object_transform_col_2,
+		instance.object_transform_col_3,
+	);
+	let normal_transform = mat4x4<f32>(
+		instance.normal_transform_col_0,
+		instance.normal_transform_col_1,
+		instance.normal_transform_col_2,
+		instance.normal_transform_col_3,
+	);
+	let world_position = object_transform * vec4<f32>(vertex.position, 0.0, 1.0);
 	return FragmentInput(
 		camera_transform.transformation * world_position,
 		world_position,
-		normalize(normal_transform.transformation * vec4<f32>(input.normal, 0.0)),
-		vec4<f32>(input.color, 1.0),
+		normalize(normal_transform * vec4<f32>(0.0, 0.0, 1.0, 0.0)),
+		vec4<f32>(instance.color, 1.0),
 	);
 }
 

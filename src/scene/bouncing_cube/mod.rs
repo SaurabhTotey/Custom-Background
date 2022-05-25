@@ -10,16 +10,16 @@ use wgpu::util::DeviceExt;
 
 #[repr(C)]
 #[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
-struct Vertex {
-	position: [f32; 3],
-	normal: [f32; 3],
-	color: [f32; 3],
+struct QuadVertex {
+	position: [f32; 2],
 }
 
-#[repr(C, align(256))]
-#[derive(Clone, Copy, bytemuck::Zeroable)]
-struct InstanceTransform {
-	matrix: [[f32; 4]; 4],
+#[repr(C)]
+#[derive(Clone, Copy, Debug, bytemuck::Pod, bytemuck::Zeroable)]
+struct InstanceData {
+	color: [f32; 3],
+	object_transform: [[f32; 4]; 4],
+	normal_transform: [[f32; 4]; 4],
 }
 
 #[repr(C)]
@@ -42,15 +42,13 @@ struct LightInformationDatum {
 
 pub struct BouncingCubeScene {
 	bouncing_cube_model: bouncing_cube_model::BouncingCubeSceneInformation,
+	quad_transforms: [glam::Mat4; 11],
 	render_pipeline: wgpu::RenderPipeline,
 	vertex_buffer: wgpu::Buffer,
 	index_buffer: wgpu::Buffer,
 	render_camera_uniform_buffer: wgpu::Buffer,
 	render_camera_bind_group: wgpu::BindGroup,
-	instance_model_dynamic_uniform_buffer: wgpu::Buffer,
-	instance_normal_dynamic_uniform_buffer: wgpu::Buffer,
-	instance_bind_group: wgpu::BindGroup,
-	instance_buffer_spacing: wgpu::BufferAddress,
+	instance_buffer: wgpu::Buffer,
 	light_information_buffer: wgpu::Buffer,
 	light_information_bind_group: wgpu::BindGroup,
 	depth_texture: crate::scene::utilities::texture::Texture,
@@ -63,24 +61,72 @@ impl BouncingCubeScene {
 			surface_configuration.width as f32,
 			surface_configuration.height as f32,
 		);
+		let quad_transforms = [
+			glam::Mat4::from_rotation_translation(
+				glam::Quat::from_rotation_y(-std::f32::consts::FRAC_PI_2),
+				-0.5 * glam::Vec3::X,
+			), // left cube quad
+			glam::Mat4::from_rotation_translation(
+				glam::Quat::from_rotation_y(std::f32::consts::FRAC_PI_2),
+				0.5 * glam::Vec3::X,
+			), // right cube quad
+			glam::Mat4::from_rotation_translation(
+				glam::Quat::from_rotation_x(std::f32::consts::FRAC_PI_2),
+				0.5 * glam::Vec3::Y,
+			), // top cube quad
+			glam::Mat4::from_rotation_translation(
+				glam::Quat::from_rotation_x(-std::f32::consts::FRAC_PI_2),
+				-0.5 * glam::Vec3::Y,
+			), // bottom cube quad
+			glam::Mat4::from_translation(0.5 * glam::Vec3::Z), // back cube quad
+			glam::Mat4::from_translation(-0.5 * glam::Vec3::Z), // front cube quad
+			glam::Mat4::from_rotation_translation(
+				glam::Quat::from_rotation_y(std::f32::consts::FRAC_PI_2),
+				-glam::Vec3::X,
+			), // left wall quad
+			glam::Mat4::from_rotation_translation(
+				glam::Quat::from_rotation_y(-std::f32::consts::FRAC_PI_2),
+				glam::Vec3::X,
+			), // right wall quad
+			glam::Mat4::from_rotation_translation(
+				glam::Quat::from_rotation_x(-std::f32::consts::FRAC_PI_2),
+				glam::Vec3::Y,
+			), // top wall quad
+			glam::Mat4::from_rotation_translation(
+				glam::Quat::from_rotation_x(std::f32::consts::FRAC_PI_2),
+				-glam::Vec3::Y,
+			), // bottom wall quad
+			glam::Mat4::from_rotation_translation(
+				glam::Quat::from_rotation_x(std::f32::consts::PI),
+				glam::Vec3::Z,
+			), // back wall quad
+		];
 
 		// Get shader.
 		let render_shader_module = device.create_shader_module(&wgpu::include_wgsl!("render.wgsl"));
 
 		// Create buffers and bind groups.
-		let vertex_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+		let vertex_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
 			label: Some("Bouncing cube scene vertex buffer"),
-			size: std::mem::size_of::<Vertex>() as wgpu::BufferAddress * 44, // 24 for cube, 20 for walls
-			usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
-			mapped_at_creation: false,
+			contents: bytemuck::cast_slice(&[
+				QuadVertex {
+					position: [-0.5, 0.5],
+				},
+				QuadVertex {
+					position: [-0.5, -0.5],
+				},
+				QuadVertex {
+					position: [0.5, -0.5],
+				},
+				QuadVertex {
+					position: [0.5, 0.5],
+				},
+			]),
+			usage: wgpu::BufferUsages::VERTEX,
 		});
 		let index_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
 			label: Some("Bouncing cube scene index buffer"),
-			contents: bytemuck::cast_slice(
-				&(0..11) // 6 cube faces and 5 walls
-					.flat_map(|face| [0u16, 1, 2, 0, 2, 3].iter().map(move |i| face * 4 + i))
-					.collect::<Vec<_>>(),
-			),
+			contents: bytemuck::cast_slice(&[0u16, 1, 2, 0, 2, 3]),
 			usage: wgpu::BufferUsages::INDEX,
 		});
 		let (
@@ -96,73 +142,12 @@ impl BouncingCubeScene {
 			"Bouncing cube scene",
 		);
 
-		// Create dynamic uniform buffer for instance data.
-		let instance_buffer_spacing =
-			device.limits().min_uniform_buffer_offset_alignment as wgpu::BufferAddress;
-		let instance_model_dynamic_uniform_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+		// Create the instance buffer.
+		let instance_buffer = device.create_buffer(&wgpu::BufferDescriptor {
 			label: Some("Bouncing cube scene instance model dynamic uniform buffer"),
-			size: 11 * instance_buffer_spacing, // 11 quads each with their own transform
-			usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::UNIFORM,
+			size: 11 * std::mem::size_of::<InstanceData>() as wgpu::BufferAddress, // 11 quads: 6 for the cube and 5 for the walls
+			usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::VERTEX,
 			mapped_at_creation: false,
-		});
-		let instance_normal_dynamic_uniform_buffer =
-			device.create_buffer(&wgpu::BufferDescriptor {
-				label: Some("Bouncing cube scene instance normal dynamic uniform buffer"),
-				size: 11 * instance_buffer_spacing,
-				usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::UNIFORM,
-				mapped_at_creation: false,
-			});
-		let instance_bind_group_layout =
-			device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-				label: Some("Bouncing cube scene instance bind group layout"),
-				entries: &[
-					wgpu::BindGroupLayoutEntry {
-						binding: 0,
-						visibility: wgpu::ShaderStages::VERTEX,
-						ty: wgpu::BindingType::Buffer {
-							ty: wgpu::BufferBindingType::Uniform,
-							has_dynamic_offset: true,
-							min_binding_size: wgpu::BufferSize::new(std::mem::size_of::<
-								InstanceTransform,
-							>() as _),
-						},
-						count: None,
-					},
-					wgpu::BindGroupLayoutEntry {
-						binding: 1,
-						visibility: wgpu::ShaderStages::VERTEX,
-						ty: wgpu::BindingType::Buffer {
-							ty: wgpu::BufferBindingType::Uniform,
-							has_dynamic_offset: true,
-							min_binding_size: wgpu::BufferSize::new(std::mem::size_of::<
-								InstanceTransform,
-							>() as _),
-						},
-						count: None,
-					},
-				],
-			});
-		let instance_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-			label: Some("Bouncing cube scene instance bind group"),
-			layout: &instance_bind_group_layout,
-			entries: &[
-				wgpu::BindGroupEntry {
-					binding: 0,
-					resource: wgpu::BindingResource::Buffer(wgpu::BufferBinding {
-						buffer: &instance_model_dynamic_uniform_buffer,
-						offset: 0,
-						size: wgpu::BufferSize::new(std::mem::size_of::<InstanceTransform>() as _),
-					}),
-				},
-				wgpu::BindGroupEntry {
-					binding: 1,
-					resource: wgpu::BindingResource::Buffer(wgpu::BufferBinding {
-						buffer: &instance_normal_dynamic_uniform_buffer,
-						offset: 0,
-						size: wgpu::BufferSize::new(std::mem::size_of::<InstanceTransform>() as _),
-					}),
-				},
-			],
 		});
 
 		// Create uniform buffer for light information.
@@ -201,7 +186,6 @@ impl BouncingCubeScene {
 				label: Some("Bouncing cube scene pipeline layout"),
 				bind_group_layouts: &[
 					&render_camera_bind_group_layout,
-					&instance_bind_group_layout,
 					&light_information_bind_group_layout,
 				],
 				push_constant_ranges: &[wgpu::PushConstantRange {
@@ -215,11 +199,18 @@ impl BouncingCubeScene {
 			vertex: wgpu::VertexState {
 				module: &render_shader_module,
 				entry_point: "vertex_stage",
-				buffers: &[wgpu::VertexBufferLayout {
-					array_stride: std::mem::size_of::<Vertex>() as wgpu::BufferAddress,
-					step_mode: wgpu::VertexStepMode::Vertex,
-					attributes: &wgpu::vertex_attr_array![0 => Float32x3, 1 => Float32x3, 2 => Float32x3],
-				}],
+				buffers: &[
+					wgpu::VertexBufferLayout {
+						array_stride: std::mem::size_of::<QuadVertex>() as wgpu::BufferAddress,
+						step_mode: wgpu::VertexStepMode::Vertex,
+						attributes: &wgpu::vertex_attr_array![0 => Float32x2],
+					},
+					wgpu::VertexBufferLayout {
+						array_stride: std::mem::size_of::<InstanceData>() as wgpu::BufferAddress,
+						step_mode: wgpu::VertexStepMode::Instance,
+						attributes: &wgpu::vertex_attr_array![1 => Float32x3, 2 => Float32x4, 3 => Float32x4, 4 => Float32x4, 5 => Float32x4, 6 => Float32x4, 7 => Float32x4, 8 => Float32x4, 9 => Float32x4],
+					}
+				],
 			},
 			fragment: Some(wgpu::FragmentState {
 				module: &render_shader_module,
@@ -244,259 +235,18 @@ impl BouncingCubeScene {
 
 		Self {
 			bouncing_cube_model,
+			quad_transforms,
 			render_pipeline,
 			vertex_buffer,
 			index_buffer,
 			render_camera_uniform_buffer,
 			render_camera_bind_group,
-			instance_model_dynamic_uniform_buffer,
-			instance_normal_dynamic_uniform_buffer,
-			instance_bind_group,
-			instance_buffer_spacing,
+			instance_buffer,
 			light_information_buffer,
 			light_information_bind_group,
 			depth_texture,
 		}
 	}
-
-	// Vertices for the cube in its own reference frame: all need to be transformed into world coordinates.
-	const CUBE_VERTICES: [Vertex; 24] = [
-		// back face
-		Vertex {
-			position: [-1.0, -1.0, -1.0],
-			normal: [0.0, 0.0, -1.0],
-			color: [1.0, 0.0, 0.0],
-		},
-		Vertex {
-			position: [1.0, -1.0, -1.0],
-			normal: [0.0, 0.0, -1.0],
-			color: [1.0, 0.0, 0.0],
-		},
-		Vertex {
-			position: [1.0, 1.0, -1.0],
-			normal: [0.0, 0.0, -1.0],
-			color: [1.0, 0.0, 0.0],
-		},
-		Vertex {
-			position: [-1.0, 1.0, -1.0],
-			normal: [0.0, 0.0, -1.0],
-			color: [1.0, 0.0, 0.0],
-		},
-		// front face
-		Vertex {
-			position: [-1.0, -1.0, 1.0],
-			normal: [0.0, 0.0, 1.0],
-			color: [1.0, 0.0, 0.0],
-		},
-		Vertex {
-			position: [1.0, -1.0, 1.0],
-			normal: [0.0, 0.0, 1.0],
-			color: [1.0, 0.0, 0.0],
-		},
-		Vertex {
-			position: [1.0, 1.0, 1.0],
-			normal: [0.0, 0.0, 1.0],
-			color: [1.0, 0.0, 0.0],
-		},
-		Vertex {
-			position: [-1.0, 1.0, 1.0],
-			normal: [0.0, 0.0, 1.0],
-			color: [1.0, 0.0, 0.0],
-		},
-		// left face
-		Vertex {
-			position: [-1.0, -1.0, -1.0],
-			normal: [-1.0, 0.0, 0.0],
-			color: [0.0, 1.0, 0.0],
-		},
-		Vertex {
-			position: [-1.0, -1.0, 1.0],
-			normal: [-1.0, 0.0, 0.0],
-			color: [0.0, 1.0, 0.0],
-		},
-		Vertex {
-			position: [-1.0, 1.0, 1.0],
-			normal: [-1.0, 0.0, 0.0],
-			color: [0.0, 1.0, 0.0],
-		},
-		Vertex {
-			position: [-1.0, 1.0, -1.0],
-			normal: [-1.0, 0.0, 0.0],
-			color: [0.0, 1.0, 0.0],
-		},
-		// right face
-		Vertex {
-			position: [1.0, -1.0, -1.0],
-			normal: [1.0, 0.0, 0.0],
-			color: [0.0, 1.0, 0.0],
-		},
-		Vertex {
-			position: [1.0, -1.0, 1.0],
-			normal: [1.0, 0.0, 0.0],
-			color: [0.0, 1.0, 0.0],
-		},
-		Vertex {
-			position: [1.0, 1.0, 1.0],
-			normal: [1.0, 0.0, 0.0],
-			color: [0.0, 1.0, 0.0],
-		},
-		Vertex {
-			position: [1.0, 1.0, -1.0],
-			normal: [1.0, 0.0, 0.0],
-			color: [0.0, 1.0, 0.0],
-		},
-		// bottom face
-		Vertex {
-			position: [-1.0, -1.0, 1.0],
-			normal: [0.0, -1.0, 0.0],
-			color: [0.0, 0.0, 1.0],
-		},
-		Vertex {
-			position: [1.0, -1.0, 1.0],
-			normal: [0.0, -1.0, 0.0],
-			color: [0.0, 0.0, 1.0],
-		},
-		Vertex {
-			position: [1.0, -1.0, -1.0],
-			normal: [0.0, -1.0, 0.0],
-			color: [0.0, 0.0, 1.0],
-		},
-		Vertex {
-			position: [-1.0, -1.0, -1.0],
-			normal: [0.0, -1.0, 0.0],
-			color: [0.0, 0.0, 1.0],
-		},
-		// top face
-		Vertex {
-			position: [-1.0, 1.0, 1.0],
-			normal: [0.0, 1.0, 0.0],
-			color: [0.0, 0.0, 1.0],
-		},
-		Vertex {
-			position: [1.0, 1.0, 1.0],
-			normal: [0.0, 1.0, 0.0],
-			color: [0.0, 0.0, 1.0],
-		},
-		Vertex {
-			position: [1.0, 1.0, -1.0],
-			normal: [0.0, 1.0, 0.0],
-			color: [0.0, 0.0, 1.0],
-		},
-		Vertex {
-			position: [-1.0, 1.0, -1.0],
-			normal: [0.0, 1.0, 0.0],
-			color: [0.0, 0.0, 1.0],
-		},
-	];
-
-	// Vertices for the walls in their own reference frame: all need to be transformed into world coordinates (only scaled).
-	const WALL_COORDINATES: [Vertex; 20] = [
-		// back wall
-		Vertex {
-			position: [-1.0, -1.0, 1.0],
-			normal: [0.0, 0.0, -1.0],
-			color: [0.5, 0.5, 0.5],
-		},
-		Vertex {
-			position: [1.0, -1.0, 1.0],
-			normal: [0.0, 0.0, -1.0],
-			color: [0.5, 0.5, 0.5],
-		},
-		Vertex {
-			position: [1.0, 1.0, 1.0],
-			normal: [0.0, 0.0, -1.0],
-			color: [0.5, 0.5, 0.5],
-		},
-		Vertex {
-			position: [-1.0, 1.0, 1.0],
-			normal: [0.0, 0.0, -1.0],
-			color: [0.5, 0.5, 0.5],
-		},
-		// left wall
-		Vertex {
-			position: [-1.0, -1.0, 1.0],
-			normal: [1.0, 0.0, 0.0],
-			color: [0.5, 0.5, 0.5],
-		},
-		Vertex {
-			position: [-1.0, -1.0, -1.0],
-			normal: [1.0, 0.0, 0.0],
-			color: [0.5, 0.5, 0.5],
-		},
-		Vertex {
-			position: [-1.0, 1.0, -1.0],
-			normal: [1.0, 0.0, 0.0],
-			color: [0.5, 0.5, 0.5],
-		},
-		Vertex {
-			position: [-1.0, 1.0, 1.0],
-			normal: [1.0, 0.0, 0.0],
-			color: [0.5, 0.5, 0.5],
-		},
-		// right wall
-		Vertex {
-			position: [1.0, -1.0, 1.0],
-			normal: [-1.0, 0.0, 0.0],
-			color: [0.5, 0.5, 0.5],
-		},
-		Vertex {
-			position: [1.0, -1.0, -1.0],
-			normal: [-1.0, 0.0, 0.0],
-			color: [0.5, 0.5, 0.5],
-		},
-		Vertex {
-			position: [1.0, 1.0, -1.0],
-			normal: [-1.0, 0.0, 0.0],
-			color: [0.5, 0.5, 0.5],
-		},
-		Vertex {
-			position: [1.0, 1.0, 1.0],
-			normal: [-1.0, 0.0, 0.0],
-			color: [0.5, 0.5, 0.5],
-		},
-		// top wall
-		Vertex {
-			position: [-1.0, -1.0, -1.0],
-			normal: [0.0, 1.0, 0.0],
-			color: [0.5, 0.5, 0.5],
-		},
-		Vertex {
-			position: [1.0, -1.0, -1.0],
-			normal: [0.0, 1.0, 0.0],
-			color: [0.5, 0.5, 0.5],
-		},
-		Vertex {
-			position: [1.0, -1.0, 1.0],
-			normal: [0.0, 1.0, 0.0],
-			color: [0.5, 0.5, 0.5],
-		},
-		Vertex {
-			position: [-1.0, -1.0, 1.0],
-			normal: [0.0, 1.0, 0.0],
-			color: [0.5, 0.5, 0.5],
-		},
-		// bottom wall
-		Vertex {
-			position: [-1.0, 1.0, -1.0],
-			normal: [0.0, -1.0, 0.0],
-			color: [0.5, 0.5, 0.5],
-		},
-		Vertex {
-			position: [1.0, 1.0, -1.0],
-			normal: [0.0, -1.0, 0.0],
-			color: [0.5, 0.5, 0.5],
-		},
-		Vertex {
-			position: [1.0, 1.0, 1.0],
-			normal: [0.0, -1.0, 0.0],
-			color: [0.5, 0.5, 0.5],
-		},
-		Vertex {
-			position: [-1.0, 1.0, 1.0],
-			normal: [0.0, -1.0, 0.0],
-			color: [0.5, 0.5, 0.5],
-		},
-	];
 }
 
 impl crate::scene::Scene for BouncingCubeScene {
@@ -526,30 +276,13 @@ impl crate::scene::Scene for BouncingCubeScene {
 		queue: &wgpu::Queue,
 		output_texture_view: &wgpu::TextureView,
 	) {
-		// TODO: this only needs to be done once
-		queue.write_buffer(
-			&self.vertex_buffer,
-			0,
-			bytemuck::cast_slice(
-				&Self::CUBE_VERTICES
-					.into_iter()
-					.chain(Self::WALL_COORDINATES.into_iter())
-					.collect::<Vec<_>>(),
-			),
-		);
-
-		// Write uniforms.
-		queue.write_buffer(
-			&self.render_camera_uniform_buffer,
-			0,
-			bytemuck::bytes_of(&self.bouncing_cube_model.scene_camera.transformation),
-		);
+		// Write instance data.
 		let instance_model_transforms =
 			std::iter::repeat(glam::Mat4::from_scale_rotation_translation(
 				glam::Vec3::new(
-					self.bouncing_cube_model.cube.side_length / 2.0, // defined cube vertices give cube a side length of 2, not 1
-					self.bouncing_cube_model.cube.side_length / 2.0,
-					self.bouncing_cube_model.cube.side_length / 2.0,
+					self.bouncing_cube_model.cube.side_length,
+					self.bouncing_cube_model.cube.side_length,
+					self.bouncing_cube_model.cube.side_length,
 				),
 				glam::Quat::from_axis_angle(
 					self.bouncing_cube_model.cube.axis_of_rotation.into(),
@@ -564,36 +297,34 @@ impl crate::scene::Scene for BouncingCubeScene {
 				)))
 				.take(5),
 			)
+			.zip(&self.quad_transforms)
+			.map(|(world_transform, model_transform)| world_transform * *model_transform)
 			.collect::<Vec<_>>();
-		let instance_model_dynamic_uniform_buffer_data = &instance_model_transforms
+		let instance_buffer_data = &instance_model_transforms
 			.iter()
-			.map(|matrix| InstanceTransform {
-				matrix: matrix.to_cols_array_2d(),
+			.zip(
+				(&self.bouncing_cube_model.cube.quads)
+					.iter()
+					.chain(&self.bouncing_cube_model.wall_quads),
+			)
+			.map(|(model_transform, quad_data)| InstanceData {
+				color: quad_data.color,
+				object_transform: model_transform.to_cols_array_2d(),
+				normal_transform: model_transform.inverse().transpose().to_cols_array_2d(),
 			})
 			.collect::<Vec<_>>();
-		let instance_normal_dynamic_uniform_buffer_data = &instance_model_transforms
-			.iter()
-			.map(|matrix| InstanceTransform {
-				matrix: glam::Mat4::from_mat3(
-					glam::Mat3A::from_mat4(*matrix).inverse().transpose().into(),
-				)
-				.to_cols_array_2d(),
-			})
-			.collect::<Vec<_>>();
-		queue.write_buffer(&self.instance_model_dynamic_uniform_buffer, 0, unsafe {
-			std::slice::from_raw_parts(
-				instance_model_dynamic_uniform_buffer_data.as_ptr() as *const u8,
-				instance_model_dynamic_uniform_buffer_data.len()
-					* self.instance_buffer_spacing as usize,
-			)
-		});
-		queue.write_buffer(&self.instance_normal_dynamic_uniform_buffer, 0, unsafe {
-			std::slice::from_raw_parts(
-				instance_normal_dynamic_uniform_buffer_data.as_ptr() as *const u8,
-				instance_normal_dynamic_uniform_buffer_data.len()
-					* self.instance_buffer_spacing as usize,
-			)
-		});
+		queue.write_buffer(
+			&self.instance_buffer,
+			0,
+			bytemuck::cast_slice(&instance_buffer_data),
+		);
+
+		// Write uniforms.
+		queue.write_buffer(
+			&self.render_camera_uniform_buffer,
+			0,
+			bytemuck::bytes_of(&self.bouncing_cube_model.scene_camera.transformation),
+		);
 		queue.write_buffer(
 			&self.light_information_buffer,
 			0,
@@ -638,6 +369,7 @@ impl crate::scene::Scene for BouncingCubeScene {
 		});
 		render_pass.set_pipeline(&self.render_pipeline);
 		render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
+		render_pass.set_vertex_buffer(1, self.instance_buffer.slice(..));
 		render_pass.set_index_buffer(self.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
 		render_pass.set_push_constants(
 			wgpu::ShaderStages::FRAGMENT,
@@ -650,12 +382,7 @@ impl crate::scene::Scene for BouncingCubeScene {
 			}),
 		);
 		render_pass.set_bind_group(0, &self.render_camera_bind_group, &[]);
-		render_pass.set_bind_group(2, &self.light_information_bind_group, &[]);
-		for i in 0u32..11 {
-			let offset =
-				i as wgpu::DynamicOffset * self.instance_buffer_spacing as wgpu::DynamicOffset;
-			render_pass.set_bind_group(1, &self.instance_bind_group, &[offset, offset]);
-			render_pass.draw_indexed(6 * i..6 * i + 6, 0, 0..1);
-		}
+		render_pass.set_bind_group(1, &self.light_information_bind_group, &[]);
+		render_pass.draw_indexed(0..6, 0, 0..11);
 	}
 }

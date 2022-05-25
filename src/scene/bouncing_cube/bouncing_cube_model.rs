@@ -1,5 +1,14 @@
 use rand::Rng;
 
+pub mod direction {
+	pub const LEFT: u8 = 0;
+	pub const RIGHT: u8 = 1;
+	pub const TOP: u8 = 2;
+	pub const BOTTOM: u8 = 3;
+	pub const BACK: u8 = 4;
+	pub const FRONT: u8 = 5;
+}
+
 pub struct BouncingCubeSceneInformation {
 	pub window_size: [f32; 2],
 	pub scene_camera: crate::scene::utilities::camera::Camera,
@@ -9,6 +18,7 @@ pub struct BouncingCubeSceneInformation {
 	pub point_light_distance_from_center: f32,
 	pub point_light_rotation_angle: f32,
 	pub lights: [PointLightInformation; 3],
+	pub wall_quads: [QuadInformation; 5],
 }
 
 pub struct PointLightInformation {
@@ -22,6 +32,11 @@ pub struct CubeInformation {
 	pub velocity: glam::Vec3A,
 	pub rotation_angle: f32,
 	pub axis_of_rotation: glam::Vec3A,
+	pub quads: [QuadInformation; 6],
+}
+
+pub struct QuadInformation {
+	pub color: [f32; 3],
 }
 
 impl BouncingCubeSceneInformation {
@@ -52,6 +67,26 @@ impl BouncingCubeSceneInformation {
 			velocity: rng.gen::<glam::Vec3A>().normalize() * 1.5,
 			rotation_angle: rng.gen_range(0.0..2.0 * std::f32::consts::PI),
 			axis_of_rotation: rng.gen::<glam::Vec3A>().normalize(),
+			quads: [
+				QuadInformation {
+					color: [1.0, 0.1, 0.1],
+				},
+				QuadInformation {
+					color: [1.0, 0.1, 0.1],
+				},
+				QuadInformation {
+					color: [0.1, 1.0, 0.1],
+				},
+				QuadInformation {
+					color: [0.1, 1.0, 0.1],
+				},
+				QuadInformation {
+					color: [0.1, 0.1, 1.0],
+				},
+				QuadInformation {
+					color: [0.1, 0.1, 1.0],
+				},
+			],
 		};
 		let point_light_distance_from_center = y_bound.min(x_bound) / 3.0;
 		Self {
@@ -91,6 +126,13 @@ impl BouncingCubeSceneInformation {
 					),
 					diffuse_light: glam::Vec3A::new(0.1, 0.1, 1.0),
 				},
+			],
+			wall_quads: [
+				QuadInformation { color: [0.5; 3] },
+				QuadInformation { color: [0.5; 3] },
+				QuadInformation { color: [0.5; 3] },
+				QuadInformation { color: [0.5; 3] },
+				QuadInformation { color: [0.5; 3] },
 			],
 		}
 	}
