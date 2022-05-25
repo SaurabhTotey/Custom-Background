@@ -3,7 +3,6 @@ use wgpu::util::DeviceExt;
 
 /**
  * TODO:
- *  * make vertices only a quad and have everything be instances of that quad, and instances pass transforms and colors and reflectivity details
  *  * blinn-phong lighting
  *  * shadow mapping for point lights
  */
@@ -71,32 +70,40 @@ impl BouncingCubeScene {
 				0.5 * glam::Vec3::X,
 			), // right cube quad
 			glam::Mat4::from_rotation_translation(
-				glam::Quat::from_rotation_x(std::f32::consts::FRAC_PI_2),
+				glam::Quat::from_rotation_x(-std::f32::consts::FRAC_PI_2),
 				0.5 * glam::Vec3::Y,
 			), // top cube quad
 			glam::Mat4::from_rotation_translation(
-				glam::Quat::from_rotation_x(-std::f32::consts::FRAC_PI_2),
+				glam::Quat::from_rotation_x(std::f32::consts::FRAC_PI_2),
 				-0.5 * glam::Vec3::Y,
 			), // bottom cube quad
 			glam::Mat4::from_translation(0.5 * glam::Vec3::Z), // back cube quad
-			glam::Mat4::from_translation(-0.5 * glam::Vec3::Z), // front cube quad
 			glam::Mat4::from_rotation_translation(
+				glam::Quat::from_rotation_x(std::f32::consts::PI),
+				-0.5 * glam::Vec3::Z,
+			), // front cube quad
+			glam::Mat4::from_scale_rotation_translation(
+				glam::Vec3::new(2.0, 2.0, 2.0),
 				glam::Quat::from_rotation_y(std::f32::consts::FRAC_PI_2),
 				-glam::Vec3::X,
 			), // left wall quad
-			glam::Mat4::from_rotation_translation(
+			glam::Mat4::from_scale_rotation_translation(
+				glam::Vec3::new(2.0, 2.0, 2.0),
 				glam::Quat::from_rotation_y(-std::f32::consts::FRAC_PI_2),
 				glam::Vec3::X,
 			), // right wall quad
-			glam::Mat4::from_rotation_translation(
-				glam::Quat::from_rotation_x(-std::f32::consts::FRAC_PI_2),
+			glam::Mat4::from_scale_rotation_translation(
+				glam::Vec3::new(2.0, 2.0, 2.0),
+				glam::Quat::from_rotation_x(std::f32::consts::FRAC_PI_2),
 				glam::Vec3::Y,
 			), // top wall quad
-			glam::Mat4::from_rotation_translation(
-				glam::Quat::from_rotation_x(std::f32::consts::FRAC_PI_2),
+			glam::Mat4::from_scale_rotation_translation(
+				glam::Vec3::new(2.0, 2.0, 2.0),
+				glam::Quat::from_rotation_x(-std::f32::consts::FRAC_PI_2),
 				-glam::Vec3::Y,
 			), // bottom wall quad
-			glam::Mat4::from_rotation_translation(
+			glam::Mat4::from_scale_rotation_translation(
+				glam::Vec3::new(2.0, 2.0, 2.0),
 				glam::Quat::from_rotation_x(std::f32::consts::PI),
 				glam::Vec3::Z,
 			), // back wall quad
