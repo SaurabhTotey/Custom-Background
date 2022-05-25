@@ -3,8 +3,9 @@ use wgpu::util::DeviceExt;
 
 /**
  * TODO:
- *  * point lights with cube shadows on wall
+ *  * make vertices only a quad and have everything be instances of that quad, and instances pass transforms and colors and reflectivity details
  *  * blinn-phong lighting
+ *  * shadow mapping for point lights
  */
 
 #[repr(C)]
