@@ -29,19 +29,16 @@ struct FragmentInput {
 struct LightInformationDatum {
 	world_position: vec3<f32>;
 	color: vec3<f32>;
+	constant_attenuation: f32;
+	linear_attenuation: f32;
+	quadratic_attenuation: f32;
 };
 // Well, this is annoying: I can't have the uniform be an array type, so I need it to be this wrapper type that has the array.
 struct LightInformation {
 	i: array<LightInformationDatum, 3>;
 };
-struct SceneLightInformation {
-	ambient_light: vec3<f32>;
-	constant_attenuation: f32;
-	linear_attenuation: f32;
-	quadratic_attenuation: f32;
-};
 
-var<push_constant> scene_light_information: SceneLightInformation;
+var<push_constant> ambient_light: vec3<f32>;
 [[group(1), binding(0)]]
 var<uniform> light_information: LightInformation;
 
@@ -76,8 +73,8 @@ fn calculate_light_contribution(light: LightInformationDatum, normal: vec3<f32>,
 	let distance_to_light = length(light.world_position - world_position);
 	let light_direction = normalize(light.world_position - world_position);
 	let diffuse_amount = max(0.0, dot(normal, light_direction));
-	let attenuation = 1.0 / (scene_light_information.constant_attenuation + distance_to_light * scene_light_information.linear_attenuation + distance_to_light * distance_to_light * scene_light_information.quadratic_attenuation);
-	return attenuation * (scene_light_information.ambient_light + diffuse_amount * light.color);
+	let attenuation = 1.0 / (light.constant_attenuation + distance_to_light * light.linear_attenuation + distance_to_light * distance_to_light * light.quadratic_attenuation);
+	return attenuation * (ambient_light + diffuse_amount * light.color);
 }
 
 [[stage(fragment)]]

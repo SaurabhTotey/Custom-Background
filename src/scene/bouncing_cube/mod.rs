@@ -3,7 +3,6 @@ use wgpu::util::DeviceExt;
 
 /**
  * TODO:
- *  * move light attenuation information into the model (is attenuation a global parameter, or does it depend per light?)
  *  * blinn-phong lighting
  *  * shadow mapping for point lights
  */
@@ -24,20 +23,15 @@ struct InstanceData {
 
 #[repr(C)]
 #[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
-struct SceneLightInformation {
-	ambient_light: [f32; 3],
-	constant_attenuation: f32,
-	linear_attenuation: f32,
-	quadratic_attenuation: f32,
-}
-
-#[repr(C)]
-#[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
 struct LightInformationDatum {
 	position: [f32; 3],
 	_padding_0: u32,
 	diffuse_color: [f32; 3],
 	_padding_1: u32,
+	constant_attenuation: f32,
+	linear_attenuation: f32,
+	quadratic_attenuation: f32,
+	_padding_2: u32,
 }
 
 pub struct BouncingCubeScene {
@@ -61,6 +55,9 @@ impl BouncingCubeScene {
 			surface_configuration.width as f32,
 			surface_configuration.height as f32,
 		);
+
+		// Make the quad transforms since all drawn quads are instanced from the same quad of unit sidelength centered in the xy plane.
+		// The quad transform rotations are incredibly important because the normal must also be transformed correctly.
 		let quad_transforms = [
 			glam::Mat4::from_rotation_translation(
 				glam::Quat::from_rotation_y(-std::f32::consts::FRAC_PI_2),
@@ -198,7 +195,7 @@ impl BouncingCubeScene {
 				],
 				push_constant_ranges: &[wgpu::PushConstantRange {
 					stages: wgpu::ShaderStages::FRAGMENT,
-					range: 0..28, // 12 bytes for a vector of 3 floats (and each float is 4 bytes)
+					range: 0..12, // 12 bytes for a vector of 3 floats (and each float is 4 bytes)
 				}],
 			});
 		let render_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
@@ -346,6 +343,10 @@ impl crate::scene::Scene for BouncingCubeScene {
 						_padding_0: 0,
 						diffuse_color: light.diffuse_light.into(),
 						_padding_1: 0,
+						constant_attenuation: light.constant_attenuation,
+						linear_attenuation: light.linear_attenuation,
+						quadratic_attenuation: light.quadratic_attenuation,
+						_padding_2: 0,
 					})
 					.collect::<Vec<_>>(),
 			),
@@ -382,12 +383,7 @@ impl crate::scene::Scene for BouncingCubeScene {
 		render_pass.set_push_constants(
 			wgpu::ShaderStages::FRAGMENT,
 			0,
-			bytemuck::bytes_of(&SceneLightInformation {
-				ambient_light: self.bouncing_cube_model.ambient_light.into(),
-				constant_attenuation: 1.0,
-				linear_attenuation: 0.7,
-				quadratic_attenuation: 1.8,
-			}),
+			bytemuck::bytes_of(&glam::Vec3::from(self.bouncing_cube_model.ambient_light)),
 		);
 		render_pass.set_bind_group(0, &self.render_camera_bind_group, &[]);
 		render_pass.set_bind_group(1, &self.light_information_bind_group, &[]);

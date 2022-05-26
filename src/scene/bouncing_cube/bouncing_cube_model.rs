@@ -24,6 +24,9 @@ pub struct BouncingCubeSceneInformation {
 pub struct PointLightInformation {
 	pub position: glam::Vec3A,
 	pub diffuse_light: glam::Vec3A,
+	pub constant_attenuation: f32,
+	pub linear_attenuation: f32,
+	pub quadratic_attenuation: f32,
 }
 
 pub struct CubeInformation {
@@ -105,6 +108,9 @@ impl BouncingCubeSceneInformation {
 						-2.1,
 					),
 					diffuse_light: glam::Vec3A::new(1.0, 0.1, 0.1),
+					constant_attenuation: 1.0,
+					linear_attenuation: 0.7,
+					quadratic_attenuation: 1.8,
 				},
 				PointLightInformation {
 					position: glam::Vec3A::new(
@@ -115,6 +121,9 @@ impl BouncingCubeSceneInformation {
 						-2.1,
 					),
 					diffuse_light: glam::Vec3A::new(0.1, 1.0, 0.1),
+					constant_attenuation: 1.0,
+					linear_attenuation: 0.7,
+					quadratic_attenuation: 1.8,
 				},
 				PointLightInformation {
 					position: glam::Vec3A::new(
@@ -125,6 +134,9 @@ impl BouncingCubeSceneInformation {
 						-2.1,
 					),
 					diffuse_light: glam::Vec3A::new(0.1, 0.1, 1.0),
+					constant_attenuation: 1.0,
+					linear_attenuation: 0.7,
+					quadratic_attenuation: 1.8,
 				},
 			],
 			wall_quads: [
