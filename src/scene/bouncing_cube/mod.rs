@@ -12,6 +12,14 @@ use wgpu::util::DeviceExt;
 struct QuadVertex {
 	position: [f32; 2],
 }
+#[repr(C)]
+#[derive(Clone, Copy, Debug, bytemuck::Pod, bytemuck::Zeroable)]
+struct PushConstantData {
+	ambient_light: [f32; 3],
+	_padding_0: u32,
+	camera_position: [f32; 3],
+	_padding_1: u32,
+}
 
 #[repr(C)]
 #[derive(Clone, Copy, Debug, bytemuck::Pod, bytemuck::Zeroable)]
@@ -195,7 +203,7 @@ impl BouncingCubeScene {
 				],
 				push_constant_ranges: &[wgpu::PushConstantRange {
 					stages: wgpu::ShaderStages::FRAGMENT,
-					range: 0..12, // 12 bytes for a vector of 3 floats (and each float is 4 bytes)
+					range: 0..32, // a vec3 is 12 bytes (for 3 floats of 4 bytes each) and is aligned on 16 bytes, so two vec3s require 32 bytes of space
 				}],
 			});
 		let render_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
@@ -383,7 +391,13 @@ impl crate::scene::Scene for BouncingCubeScene {
 		render_pass.set_push_constants(
 			wgpu::ShaderStages::FRAGMENT,
 			0,
-			bytemuck::bytes_of(&glam::Vec3::from(self.bouncing_cube_model.ambient_light)),
+			bytemuck::bytes_of(&PushConstantData {
+				ambient_light: glam::Vec3::from(self.bouncing_cube_model.ambient_light).into(),
+				_padding_0: 0,
+				camera_position: glam::Vec3::from(self.bouncing_cube_model.scene_camera.position)
+					.into(),
+				_padding_1: 0,
+			}),
 		);
 		render_pass.set_bind_group(0, &self.render_camera_bind_group, &[]);
 		render_pass.set_bind_group(1, &self.light_information_bind_group, &[]);
