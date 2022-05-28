@@ -3,7 +3,6 @@ use wgpu::util::DeviceExt;
 
 /**
  * TODO:
- *  * blinn-phong lighting
  *  * shadow mapping for point lights
  */
 
