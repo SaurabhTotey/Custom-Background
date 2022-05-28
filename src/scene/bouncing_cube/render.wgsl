@@ -33,7 +33,9 @@ struct FragmentInput {
 
 struct LightInformationDatum {
 	world_position: vec3<f32>;
-	color: vec3<f32>;
+	ambient_color: vec3<f32>;
+	diffuse_color: vec3<f32>;
+	specular_color: vec3<f32>;
 	constant_attenuation: f32;
 	linear_attenuation: f32;
 	quadratic_attenuation: f32;
@@ -42,12 +44,8 @@ struct LightInformationDatum {
 struct LightInformation {
 	i: array<LightInformationDatum, 3>;
 };
-struct PushConstantData {
-	ambient_light: vec3<f32>;
-	camera_position: vec3<f32>;
-};
 
-var<push_constant> push_constant_data: PushConstantData;
+var<push_constant> camera_position: vec3<f32>;
 [[group(1), binding(0)]]
 var<uniform> light_information: LightInformation;
 
@@ -85,7 +83,7 @@ fn calculate_light_contribution(light: LightInformationDatum, fragment: Fragment
 	let light_direction = normalize(light.world_position - fragment.world_position.xyz);
 	let diffuse_amount = max(0.0, dot(fragment.normal.xyz, light_direction));
 	let attenuation = 1.0 / (light.constant_attenuation + distance_to_light * light.linear_attenuation + distance_to_light * distance_to_light * light.quadratic_attenuation);
-	return attenuation * (push_constant_data.ambient_light * fragment.ambient_color + diffuse_amount * light.color * fragment.diffuse_color);
+	return attenuation * (light.ambient_color * fragment.ambient_color + diffuse_amount * light.diffuse_color * fragment.diffuse_color);
 }
 
 [[stage(fragment)]]
