@@ -76,37 +76,37 @@ impl BouncingCubeSceneInformation {
 			axis_of_rotation: rng.gen::<glam::Vec3A>().normalize(),
 			quads: [
 				QuadInformation {
-					shininess: 0.4,
+					shininess: 0.1,
 					ambient_color: [1.0, 0.1, 0.1],
 					diffuse_color: [1.0, 0.1, 0.1],
 					specular_color: [0.8, 0.5, 0.5],
 				},
 				QuadInformation {
-					shininess: 0.4,
+					shininess: 0.1,
 					ambient_color: [1.0, 0.1, 0.1],
 					diffuse_color: [1.0, 0.1, 0.1],
 					specular_color: [0.8, 0.5, 0.5],
 				},
 				QuadInformation {
-					shininess: 0.4,
+					shininess: 0.1,
 					ambient_color: [0.1, 1.0, 0.1],
 					diffuse_color: [0.1, 1.0, 0.1],
 					specular_color: [0.5, 0.8, 0.5],
 				},
 				QuadInformation {
-					shininess: 0.4,
+					shininess: 0.1,
 					ambient_color: [0.1, 1.0, 0.1],
 					diffuse_color: [0.1, 1.0, 0.1],
 					specular_color: [0.5, 0.8, 0.5],
 				},
 				QuadInformation {
-					shininess: 0.4,
+					shininess: 0.1,
 					ambient_color: [0.1, 0.1, 1.0],
 					diffuse_color: [0.1, 0.1, 1.0],
 					specular_color: [0.5, 0.5, 0.8],
 				},
 				QuadInformation {
-					shininess: 0.4,
+					shininess: 0.1,
 					ambient_color: [0.1, 0.1, 1.0],
 					diffuse_color: [0.1, 0.1, 1.0],
 					specular_color: [0.5, 0.5, 0.8],

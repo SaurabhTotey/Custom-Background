@@ -85,7 +85,7 @@ fn calculate_light_contribution(light: LightInformationDatum, fragment: Fragment
 	let light_direction = normalize(light.world_position - fragment.world_position.xyz);
 	let view_direction = normalize(camera_position - fragment.world_position.xyz);
 	let half_direction = normalize(view_direction + light_direction);
-	let specular_amount = pow(max(0.0, dot(fragment.normal.xyz, half_direction)), 32.0 * fragment.shininess);
+	let specular_amount = pow(max(0.0, dot(fragment.normal.xyz, half_direction)), 128.0 * fragment.shininess);
 	let diffuse_amount = max(0.0, dot(fragment.normal.xyz, light_direction));
 	let attenuation = 1.0 / (light.constant_attenuation + distance_to_light * light.linear_attenuation + distance_to_light * distance_to_light * light.quadratic_attenuation);
 	return attenuation * (light.ambient_color * fragment.ambient_color + diffuse_amount * light.diffuse_color * fragment.diffuse_color + specular_amount * light.specular_color * fragment.specular_color);
