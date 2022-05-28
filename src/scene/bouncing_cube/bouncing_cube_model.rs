@@ -39,8 +39,10 @@ pub struct CubeInformation {
 }
 
 pub struct QuadInformation {
-	pub color: [f32; 3],
 	pub shininess: f32,
+	pub ambient_color: [f32; 3],
+	pub diffuse_color: [f32; 3],
+	pub specular_color: [f32; 3],
 }
 
 impl BouncingCubeSceneInformation {
@@ -73,28 +75,40 @@ impl BouncingCubeSceneInformation {
 			axis_of_rotation: rng.gen::<glam::Vec3A>().normalize(),
 			quads: [
 				QuadInformation {
-					color: [1.0, 0.1, 0.1],
 					shininess: 0.6,
+					ambient_color: [1.0, 0.1, 0.1],
+					diffuse_color: [1.0, 0.1, 0.1],
+					specular_color: [0.5, 0.5, 0.5],
 				},
 				QuadInformation {
-					color: [1.0, 0.1, 0.1],
 					shininess: 0.6,
+					ambient_color: [1.0, 0.1, 0.1],
+					diffuse_color: [1.0, 0.1, 0.1],
+					specular_color: [0.5, 0.5, 0.5],
 				},
 				QuadInformation {
-					color: [0.1, 1.0, 0.1],
 					shininess: 0.6,
+					ambient_color: [0.1, 1.0, 0.1],
+					diffuse_color: [0.1, 1.0, 0.1],
+					specular_color: [0.5, 0.5, 0.5],
 				},
 				QuadInformation {
-					color: [0.1, 1.0, 0.1],
 					shininess: 0.6,
+					ambient_color: [0.1, 1.0, 0.1],
+					diffuse_color: [0.1, 1.0, 0.1],
+					specular_color: [0.5, 0.5, 0.5],
 				},
 				QuadInformation {
-					color: [0.1, 0.1, 1.0],
 					shininess: 0.6,
+					ambient_color: [0.1, 0.1, 1.0],
+					diffuse_color: [0.1, 0.1, 1.0],
+					specular_color: [0.5, 0.5, 0.5],
 				},
 				QuadInformation {
-					color: [0.1, 0.1, 1.0],
 					shininess: 0.6,
+					ambient_color: [0.1, 0.1, 1.0],
+					diffuse_color: [0.1, 0.1, 1.0],
+					specular_color: [0.5, 0.5, 0.5],
 				},
 			],
 		};
@@ -148,23 +162,33 @@ impl BouncingCubeSceneInformation {
 			],
 			wall_quads: [
 				QuadInformation {
-					color: [0.5; 3],
+					ambient_color: [0.5; 3],
+					diffuse_color: [0.5; 3],
+					specular_color: [0.7; 3],
 					shininess: 0.1,
 				},
 				QuadInformation {
-					color: [0.5; 3],
+					ambient_color: [0.5; 3],
+					diffuse_color: [0.5; 3],
+					specular_color: [0.7; 3],
 					shininess: 0.1,
 				},
 				QuadInformation {
-					color: [0.5; 3],
+					ambient_color: [0.5; 3],
+					diffuse_color: [0.5; 3],
+					specular_color: [0.7; 3],
 					shininess: 0.1,
 				},
 				QuadInformation {
-					color: [0.5; 3],
+					ambient_color: [0.5; 3],
+					diffuse_color: [0.5; 3],
+					specular_color: [0.7; 3],
 					shininess: 0.1,
 				},
 				QuadInformation {
-					color: [0.5; 3],
+					ambient_color: [0.5; 3],
+					diffuse_color: [0.5; 3],
+					specular_color: [0.7; 3],
 					shininess: 0.1,
 				},
 			],

@@ -2,16 +2,18 @@ struct VertexInput {
 	[[location(0)]] position: vec2<f32>;
 };
 struct InstanceInput {
-	[[location(1)]] color: vec3<f32>;
-	[[location(2)]] shininess: f32;
-	[[location(3)]] object_transform_col_0: vec4<f32>;
-	[[location(4)]] object_transform_col_1: vec4<f32>;
-	[[location(5)]] object_transform_col_2: vec4<f32>;
-	[[location(6)]] object_transform_col_3: vec4<f32>;
-	[[location(7)]] normal_transform_col_0: vec4<f32>;
-	[[location(8)]] normal_transform_col_1: vec4<f32>;
-	[[location(9)]] normal_transform_col_2: vec4<f32>;
-	[[location(10)]] normal_transform_col_3: vec4<f32>;
+	[[location(1)]] shininess: f32;
+	[[location(2)]] ambient_color: vec3<f32>;
+	[[location(3)]] diffuse_color: vec3<f32>;
+	[[location(4)]] specular_color: vec3<f32>;
+	[[location(5)]] object_transform_col_0: vec4<f32>;
+	[[location(6)]] object_transform_col_1: vec4<f32>;
+	[[location(7)]] object_transform_col_2: vec4<f32>;
+	[[location(8)]] object_transform_col_3: vec4<f32>;
+	[[location(9)]] normal_transform_col_0: vec4<f32>;
+	[[location(10)]] normal_transform_col_1: vec4<f32>;
+	[[location(11)]] normal_transform_col_2: vec4<f32>;
+	[[location(12)]] normal_transform_col_3: vec4<f32>;
 };
 
 struct Transform {
@@ -24,7 +26,9 @@ struct FragmentInput {
 	[[builtin(position)]] clip_position: vec4<f32>;
 	[[location(0)]] world_position: vec4<f32>;
 	[[location(1)]] normal: vec4<f32>;
-	[[location(2)]] color: vec4<f32>;
+	[[location(2)]] ambient_color: vec3<f32>;
+	[[location(3)]] diffuse_color: vec3<f32>;
+	[[location(4)]] specular_color: vec3<f32>;
 };
 
 struct LightInformationDatum {
@@ -70,23 +74,25 @@ fn vertex_stage(vertex: VertexInput, instance: InstanceInput) -> FragmentInput {
 		camera_transform.transformation * world_position,
 		world_position,
 		normalize(normal_transform * vec4<f32>(0.0, 0.0, 1.0, 0.0)),
-		vec4<f32>(instance.color, 1.0),
+		instance.ambient_color,
+		instance.diffuse_color,
+		instance.specular_color,
 	);
 }
 
-fn calculate_light_contribution(light: LightInformationDatum, normal: vec3<f32>, world_position: vec3<f32>) -> vec3<f32> {
-	let distance_to_light = length(light.world_position - world_position);
-	let light_direction = normalize(light.world_position - world_position);
-	let diffuse_amount = max(0.0, dot(normal, light_direction));
+fn calculate_light_contribution(light: LightInformationDatum, fragment: FragmentInput) -> vec3<f32> {
+	let distance_to_light = length(light.world_position - fragment.world_position.xyz);
+	let light_direction = normalize(light.world_position - fragment.world_position.xyz);
+	let diffuse_amount = max(0.0, dot(fragment.normal.xyz, light_direction));
 	let attenuation = 1.0 / (light.constant_attenuation + distance_to_light * light.linear_attenuation + distance_to_light * distance_to_light * light.quadratic_attenuation);
-	return attenuation * (push_constant_data.ambient_light + diffuse_amount * light.color);
+	return attenuation * (push_constant_data.ambient_light * fragment.ambient_color + diffuse_amount * light.color * fragment.diffuse_color);
 }
 
 [[stage(fragment)]]
 fn fragment_stage(input: FragmentInput) -> FragmentOutput {
 	var color = vec3<f32>(0.0);
 	for (var i = 0; i < 3; i = i + 1) {
-		color = color + input.color.rgb * calculate_light_contribution(light_information.i[i], input.normal.xyz, input.world_position.xyz);
+		color = color + calculate_light_contribution(light_information.i[i], input);
 	}
 	return FragmentOutput(vec4<f32>(color, 1.0));
 }
