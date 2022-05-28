@@ -3,14 +3,15 @@ struct VertexInput {
 };
 struct InstanceInput {
 	[[location(1)]] color: vec3<f32>;
-	[[location(2)]] object_transform_col_0: vec4<f32>;
-	[[location(3)]] object_transform_col_1: vec4<f32>;
-	[[location(4)]] object_transform_col_2: vec4<f32>;
-	[[location(5)]] object_transform_col_3: vec4<f32>;
-	[[location(6)]] normal_transform_col_0: vec4<f32>;
-	[[location(7)]] normal_transform_col_1: vec4<f32>;
-	[[location(8)]] normal_transform_col_2: vec4<f32>;
-	[[location(9)]] normal_transform_col_3: vec4<f32>;
+	[[location(2)]] shininess: f32;
+	[[location(3)]] object_transform_col_0: vec4<f32>;
+	[[location(4)]] object_transform_col_1: vec4<f32>;
+	[[location(5)]] object_transform_col_2: vec4<f32>;
+	[[location(6)]] object_transform_col_3: vec4<f32>;
+	[[location(7)]] normal_transform_col_0: vec4<f32>;
+	[[location(8)]] normal_transform_col_1: vec4<f32>;
+	[[location(9)]] normal_transform_col_2: vec4<f32>;
+	[[location(10)]] normal_transform_col_3: vec4<f32>;
 };
 
 struct Transform {

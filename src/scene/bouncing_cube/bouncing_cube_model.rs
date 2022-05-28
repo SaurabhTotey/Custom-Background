@@ -40,6 +40,7 @@ pub struct CubeInformation {
 
 pub struct QuadInformation {
 	pub color: [f32; 3],
+	pub shininess: f32,
 }
 
 impl BouncingCubeSceneInformation {
@@ -73,21 +74,27 @@ impl BouncingCubeSceneInformation {
 			quads: [
 				QuadInformation {
 					color: [1.0, 0.1, 0.1],
+					shininess: 0.6,
 				},
 				QuadInformation {
 					color: [1.0, 0.1, 0.1],
+					shininess: 0.6,
 				},
 				QuadInformation {
 					color: [0.1, 1.0, 0.1],
+					shininess: 0.6,
 				},
 				QuadInformation {
 					color: [0.1, 1.0, 0.1],
+					shininess: 0.6,
 				},
 				QuadInformation {
 					color: [0.1, 0.1, 1.0],
+					shininess: 0.6,
 				},
 				QuadInformation {
 					color: [0.1, 0.1, 1.0],
+					shininess: 0.6,
 				},
 			],
 		};
@@ -140,11 +147,26 @@ impl BouncingCubeSceneInformation {
 				},
 			],
 			wall_quads: [
-				QuadInformation { color: [0.5; 3] },
-				QuadInformation { color: [0.5; 3] },
-				QuadInformation { color: [0.5; 3] },
-				QuadInformation { color: [0.5; 3] },
-				QuadInformation { color: [0.5; 3] },
+				QuadInformation {
+					color: [0.5; 3],
+					shininess: 0.1,
+				},
+				QuadInformation {
+					color: [0.5; 3],
+					shininess: 0.1,
+				},
+				QuadInformation {
+					color: [0.5; 3],
+					shininess: 0.1,
+				},
+				QuadInformation {
+					color: [0.5; 3],
+					shininess: 0.1,
+				},
+				QuadInformation {
+					color: [0.5; 3],
+					shininess: 0.1,
+				},
 			],
 		}
 	}

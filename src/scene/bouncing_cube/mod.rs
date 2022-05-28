@@ -25,6 +25,7 @@ struct PushConstantData {
 #[derive(Clone, Copy, Debug, bytemuck::Pod, bytemuck::Zeroable)]
 struct InstanceData {
 	color: [f32; 3],
+	shininess: f32,
 	object_transform: [[f32; 4]; 4],
 	normal_transform: [[f32; 4]; 4],
 }
@@ -221,7 +222,7 @@ impl BouncingCubeScene {
 					wgpu::VertexBufferLayout {
 						array_stride: std::mem::size_of::<InstanceData>() as wgpu::BufferAddress,
 						step_mode: wgpu::VertexStepMode::Instance,
-						attributes: &wgpu::vertex_attr_array![1 => Float32x3, 2 => Float32x4, 3 => Float32x4, 4 => Float32x4, 5 => Float32x4, 6 => Float32x4, 7 => Float32x4, 8 => Float32x4, 9 => Float32x4],
+						attributes: &wgpu::vertex_attr_array![1 => Float32x3, 2 => Float32, 3 => Float32x4, 4 => Float32x4, 5 => Float32x4, 6 => Float32x4, 7 => Float32x4, 8 => Float32x4, 9 => Float32x4, 10 => Float32x4],
 					}
 				],
 			},
@@ -322,6 +323,7 @@ impl crate::scene::Scene for BouncingCubeScene {
 			)
 			.map(|(model_transform, quad_data)| InstanceData {
 				color: quad_data.color,
+				shininess: quad_data.shininess,
 				object_transform: model_transform.to_cols_array_2d(),
 				normal_transform: model_transform.inverse().transpose().to_cols_array_2d(),
 			})
