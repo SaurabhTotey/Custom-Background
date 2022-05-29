@@ -149,7 +149,8 @@ impl BouncingCubeScene {
 			.create_bind_group(device, "Bouncing cube scene");
 		let depth_texture = crate::scene::utilities::texture::Texture::create_depth_texture(
 			device,
-			surface_configuration,
+			surface_configuration.width,
+			surface_configuration.height,
 			"Bouncing cube scene",
 		);
 
@@ -272,7 +273,8 @@ impl crate::scene::Scene for BouncingCubeScene {
 		);
 		self.depth_texture = crate::scene::utilities::texture::Texture::create_depth_texture(
 			device,
-			surface_configuration,
+			surface_configuration.width,
+			surface_configuration.height,
 			"Bouncing cube scene",
 		);
 	}

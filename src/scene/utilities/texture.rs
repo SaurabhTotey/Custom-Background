@@ -12,12 +12,13 @@ impl Texture {
 
 	pub fn create_depth_texture(
 		device: &wgpu::Device,
-		surface_configuration: &wgpu::SurfaceConfiguration,
+		width: u32,
+		height: u32,
 		scene_name: &str,
 	) -> Texture {
 		let texture_extent = wgpu::Extent3d {
-			width: surface_configuration.width,
-			height: surface_configuration.height,
+			width,
+			height,
 			depth_or_array_layers: 1,
 		};
 		let texture_descriptor_label = &(scene_name.to_owned() + " depth texture");
