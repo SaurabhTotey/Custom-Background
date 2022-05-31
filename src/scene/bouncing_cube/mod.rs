@@ -52,6 +52,9 @@ pub struct BouncingCubeScene {
 	light_information_buffer: wgpu::Buffer,
 	light_information_bind_group: wgpu::BindGroup,
 	depth_texture: crate::scene::utilities::texture::Texture,
+	shadow_maps: Vec<crate::scene::utilities::texture::Texture>,
+	shadow_maps_bind_group: wgpu::BindGroup,
+	shadow_maps_pipeline: wgpu::RenderPipeline,
 }
 
 impl BouncingCubeScene {
@@ -192,13 +195,76 @@ impl BouncingCubeScene {
 			}],
 		});
 
-		// Create pipeline layout and pipeline.
+		// Create shadow maps and corresponding bind group layout and bind group. TODO: bind group creation for the array of textures might be useful to have moved into utilities/texture.rs
+		let shadow_maps = (0..6 * bouncing_cube_model.lights.len())
+			.map(|_| {
+				crate::scene::utilities::texture::Texture::create_depth_texture(
+					device,
+					512,
+					512,
+					"Bouncing cube scene shadow",
+				)
+			})
+			.collect::<Vec<_>>();
+		let shadow_maps_bind_group_layout =
+			device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+				label: Some("Bouncing cube scene shadow bind group layout"),
+				entries: &[
+					wgpu::BindGroupLayoutEntry {
+						binding: 0,
+						visibility: wgpu::ShaderStages::FRAGMENT,
+						ty: wgpu::BindingType::Texture {
+							sample_type: wgpu::TextureSampleType::Depth,
+							view_dimension: wgpu::TextureViewDimension::D2,
+							multisampled: false,
+						},
+						count: std::num::NonZeroU32::new(
+							6 * bouncing_cube_model.lights.len() as u32,
+						),
+					},
+					wgpu::BindGroupLayoutEntry {
+						binding: 1,
+						visibility: wgpu::ShaderStages::FRAGMENT,
+						ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Comparison),
+						count: std::num::NonZeroU32::new(
+							6 * bouncing_cube_model.lights.len() as u32,
+						),
+					},
+				],
+			});
+		let shadow_maps_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+			label: Some("Bouncing cube scene shadow bind group"),
+			layout: &shadow_maps_bind_group_layout,
+			entries: &[
+				wgpu::BindGroupEntry {
+					binding: 0,
+					resource: wgpu::BindingResource::TextureViewArray(
+						&shadow_maps
+							.iter()
+							.map(|texture| &texture.texture_view)
+							.collect::<Vec<_>>(),
+					),
+				},
+				wgpu::BindGroupEntry {
+					binding: 1,
+					resource: wgpu::BindingResource::SamplerArray(
+						&shadow_maps
+							.iter()
+							.map(|texture| &texture.sampler)
+							.collect::<Vec<_>>(),
+					),
+				},
+			],
+		});
+
+		// Create pipeline layout and pipeline for rendering.
 		let render_pipeline_layout =
 			device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
 				label: Some("Bouncing cube scene pipeline layout"),
 				bind_group_layouts: &[
 					&render_camera_bind_group_layout,
 					&light_information_bind_group_layout,
+					&shadow_maps_bind_group_layout,
 				],
 				push_constant_ranges: &[wgpu::PushConstantRange {
 					stages: wgpu::ShaderStages::FRAGMENT,
@@ -245,6 +311,45 @@ impl BouncingCubeScene {
 			multiview: None,
 		});
 
+		// Create pipeline layout and pipeline for shadowmap construction.
+		let shadow_maps_pipeline_layout =
+			device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+				label: Some("Bouncing cube scene shadow pipeline layout"),
+				bind_group_layouts: &[&render_camera_bind_group_layout],
+				push_constant_ranges: &[],
+			});
+		let shadow_maps_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+			label: Some("Bouncing cube scene shadow pipeline"),
+			layout: Some(&shadow_maps_pipeline_layout),
+			vertex: wgpu::VertexState {
+				module: &render_shader_module, // TODO: the shader module should be different
+				entry_point: "vertex_stage",
+				buffers: &[ // TODO: vertex layout is exactly the same from render pipeline, so this shouldn't be able to differ from that
+					wgpu::VertexBufferLayout {
+						array_stride: std::mem::size_of::<QuadVertex>() as wgpu::BufferAddress,
+						step_mode: wgpu::VertexStepMode::Vertex,
+						attributes: &wgpu::vertex_attr_array![0 => Float32x2],
+					},
+					wgpu::VertexBufferLayout {
+						array_stride: std::mem::size_of::<InstanceData>() as wgpu::BufferAddress,
+						step_mode: wgpu::VertexStepMode::Instance,
+						attributes: &wgpu::vertex_attr_array![1 => Float32, 2 => Float32x3, 3 => Float32x3, 4 => Float32x3, 5 => Float32x4, 6 => Float32x4, 7 => Float32x4, 8 => Float32x4, 9 => Float32x4, 10 => Float32x4, 11 => Float32x4, 12 => Float32x4],
+					}
+				],
+			},
+			fragment: None,
+			primitive: wgpu::PrimitiveState::default(),
+			depth_stencil: Some(wgpu::DepthStencilState {
+				format: crate::scene::utilities::texture::Texture::DEPTH_FORMAT,
+				depth_write_enabled: true,
+				depth_compare: wgpu::CompareFunction::Less,
+				stencil: wgpu::StencilState::default(),
+				bias: wgpu::DepthBiasState::default(),
+			}),
+			multisample: wgpu::MultisampleState::default(),
+			multiview: None,
+		});
+
 		Self {
 			bouncing_cube_model,
 			quad_transforms,
@@ -257,6 +362,9 @@ impl BouncingCubeScene {
 			light_information_buffer,
 			light_information_bind_group,
 			depth_texture,
+			shadow_maps,
+			shadow_maps_bind_group,
+			shadow_maps_pipeline,
 		}
 	}
 }
@@ -289,6 +397,8 @@ impl crate::scene::Scene for BouncingCubeScene {
 		queue: &wgpu::Queue,
 		output_texture_view: &wgpu::TextureView,
 	) {
+		// TODO: use the shadow_maps_pipeline to render to each of the shadow_maps (6 per light, each one in a different direction)
+
 		// Write instance data.
 		let instance_model_transforms =
 			std::iter::repeat(glam::Mat4::from_scale_rotation_translation(
@@ -404,6 +514,7 @@ impl crate::scene::Scene for BouncingCubeScene {
 		);
 		render_pass.set_bind_group(0, &self.render_camera_bind_group, &[]);
 		render_pass.set_bind_group(1, &self.light_information_bind_group, &[]);
+		render_pass.set_bind_group(2, &self.shadow_maps_bind_group, &[]);
 		render_pass.draw_indexed(0..6, 0, 0..11);
 	}
 }

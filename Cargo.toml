@@ -6,7 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-wgpu = "0.12"
+wgpu = { git = "https://github.com/gfx-rs/wgpu", rev = "8063edc6482cfc828895ec0feaa446767fecc510" }
 winit = { version = "0.26", features = ["x11"] }
 bytemuck = { version = "1.4", features = ["derive"] }
 rand = "0.8"
