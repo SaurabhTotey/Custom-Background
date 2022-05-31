@@ -3,6 +3,7 @@ use wgpu::util::DeviceExt;
 
 /**
  * TODO:
+ *  * for shadow remapping, rework bind group to be an arraytexture with 18 layers rather than an array of textures
  *  * shadow mapping for point lights
  */
 
