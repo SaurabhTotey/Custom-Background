@@ -51,9 +51,9 @@ var<push_constant> camera_position: vec3<f32>;
 var<uniform> light_information: LightInformation;
 
 @group(2) @binding(0)
-var shadow_maps_textures: binding_array<texture_depth_2d>;
+var total_shadow_map_textures: texture_depth_2d_array;
 @group(2) @binding(1)
-var shadow_maps_samplers: binding_array<sampler_comparison>;
+var total_shadow_map_sampler: sampler;
 
 struct FragmentOutput {
 	@location(0) color: vec4<f32>,

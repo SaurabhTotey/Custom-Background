@@ -2,9 +2,9 @@ pub struct Texture {
 	pub texture: wgpu::Texture,
 	pub texture_view: wgpu::TextureView,
 	pub sampler: wgpu::Sampler,
-	sample_type: wgpu::TextureSampleType,
-	view_dimension: wgpu::TextureViewDimension,
-	sampler_binding_type: wgpu::SamplerBindingType,
+	pub sample_type: wgpu::TextureSampleType,
+	pub view_dimension: wgpu::TextureViewDimension,
+	pub sampler_binding_type: wgpu::SamplerBindingType,
 }
 
 impl Texture {
