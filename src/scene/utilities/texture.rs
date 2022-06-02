@@ -29,7 +29,10 @@ impl Texture {
 			sample_count: 1,
 			dimension: wgpu::TextureDimension::D2,
 			format: Self::DEPTH_FORMAT,
-			usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::TEXTURE_BINDING,
+			usage: wgpu::TextureUsages::RENDER_ATTACHMENT
+				| wgpu::TextureUsages::TEXTURE_BINDING
+				| wgpu::TextureUsages::COPY_SRC
+				| wgpu::TextureUsages::COPY_DST,
 		};
 		let texture = device.create_texture(&texture_descriptor);
 		let texture_view = texture.create_view(&wgpu::TextureViewDescriptor::default());

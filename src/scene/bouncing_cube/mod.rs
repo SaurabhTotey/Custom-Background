@@ -3,7 +3,7 @@ use wgpu::util::DeviceExt;
 
 /**
  * TODO:
- *  * shadow mapping for point lights
+ *  * shadow mapping for point lights -- my current approach may be wrong: the wgpu shadow example has one texture and creates multiple views for it at different layers
  */
 
 #[repr(C)]
@@ -52,6 +52,7 @@ pub struct BouncingCubeScene {
 	light_information_buffer: wgpu::Buffer,
 	light_information_bind_group: wgpu::BindGroup,
 	depth_texture: crate::scene::utilities::texture::Texture,
+	shadow_map_size: u32,
 	shadow_maps: Vec<crate::scene::utilities::texture::Texture>,
 	total_shadow_map: crate::scene::utilities::texture::Texture,
 	total_shadow_map_bind_group: wgpu::BindGroup,
@@ -352,6 +353,7 @@ impl BouncingCubeScene {
 			light_information_buffer,
 			light_information_bind_group,
 			depth_texture,
+			shadow_map_size,
 			shadow_maps,
 			total_shadow_map,
 			total_shadow_map_bind_group,
@@ -388,7 +390,36 @@ impl crate::scene::Scene for BouncingCubeScene {
 		queue: &wgpu::Queue,
 		output_texture_view: &wgpu::TextureView,
 	) {
-		// TODO: use the total_shadow_map_pipeline to render to each of the shadow_maps (6 per light, each one in a different direction) and then aggregate them all into total_shadow_map
+		// TODO: use the total_shadow_map_pipeline to render to each of the shadow_maps (6 per light, each one in a different direction)
+
+		// Write each shadow map into a layer of total_shadow_map. TODO: this doesn't work -- the error says I need to copy from the whole depth texture, but that's what I am doing: I suspect
+		// the real error is that I'm not copying to the whole depth texture, which I am not doing (I'm only copying to a layer). I may need to write to a buffer first
+		for i in 0..self.shadow_maps.len() {
+			let shadow_map = &self.shadow_maps[i];
+			command_encoder.copy_texture_to_texture(
+				wgpu::ImageCopyTexture {
+					texture: &shadow_map.texture,
+					mip_level: 0,
+					origin: wgpu::Origin3d::ZERO,
+					aspect: wgpu::TextureAspect::DepthOnly,
+				},
+				wgpu::ImageCopyTexture {
+					texture: &self.total_shadow_map.texture,
+					mip_level: 0,
+					origin: wgpu::Origin3d {
+						x: 0,
+						y: 0,
+						z: i as u32,
+					},
+					aspect: wgpu::TextureAspect::DepthOnly,
+				},
+				wgpu::Extent3d {
+					width: self.shadow_map_size,
+					height: self.shadow_map_size,
+					depth_or_array_layers: 0, //1, // TODO: should be 1, not 0, but 1 errors
+				},
+			);
+		}
 
 		// Write instance data.
 		let instance_model_transforms =
