@@ -3,7 +3,7 @@ use wgpu::util::DeviceExt;
 
 /**
  * TODO:
- *  * shadow mapping for point lights -- my current approach may be wrong: the wgpu shadow example has one texture and creates multiple views for it at different layers
+ *  * shadow mapping for point lights
  */
 
 #[repr(C)]
@@ -52,11 +52,10 @@ pub struct BouncingCubeScene {
 	light_information_buffer: wgpu::Buffer,
 	light_information_bind_group: wgpu::BindGroup,
 	depth_texture: crate::scene::utilities::texture::Texture,
-	shadow_map_size: u32,
-	shadow_maps: Vec<crate::scene::utilities::texture::Texture>,
-	total_shadow_map: crate::scene::utilities::texture::Texture,
-	total_shadow_map_bind_group: wgpu::BindGroup,
-	total_shadow_map_pipeline: wgpu::RenderPipeline,
+	shadow_map: crate::scene::utilities::texture::Texture,
+	shadow_map_texture_views: Vec<wgpu::TextureView>,
+	shadow_map_bind_group: wgpu::BindGroup,
+	shadow_map_pipeline: wgpu::RenderPipeline,
 }
 
 impl BouncingCubeScene {
@@ -197,56 +196,58 @@ impl BouncingCubeScene {
 			}],
 		});
 
-		// Create shadow maps and corresponding bind group layout and bind group. TODO: bind group creation for the array of textures might be useful to have moved into utilities/texture.rs
+		// Create shadow maps and corresponding bind group layout and bind group.
 		let shadow_map_size = 512;
-		let shadow_maps = (0..6 * bouncing_cube_model.lights.len())
-			.map(|_| {
-				crate::scene::utilities::texture::Texture::create_depth_texture(
-					device,
-					shadow_map_size,
-					shadow_map_size,
-					"Bouncing cube scene shadow",
-				)
-			})
-			.collect::<Vec<_>>();
-		let total_shadow_map_extent = wgpu::Extent3d {
+		let shadow_map_extent = wgpu::Extent3d {
 			width: shadow_map_size,
 			height: shadow_map_size,
-			depth_or_array_layers: shadow_maps.len() as u32,
+			depth_or_array_layers: bouncing_cube_model.lights.len() as u32 * 6,
 		};
-		let total_shadow_map_descriptor = wgpu::TextureDescriptor {
-			label: Some("Bouncing cube scene total shadow depth texture"),
-			size: total_shadow_map_extent,
+		let shadow_map_texture = device.create_texture(&wgpu::TextureDescriptor {
+			label: Some("Bouncing cube scene shadow depth texture"),
+			size: shadow_map_extent,
 			mip_level_count: 1,
 			sample_count: 1,
 			dimension: wgpu::TextureDimension::D2,
 			format: crate::scene::utilities::texture::Texture::DEPTH_FORMAT,
-			usage: wgpu::TextureUsages::COPY_DST | wgpu::TextureUsages::TEXTURE_BINDING,
-		};
-		let total_shadow_map_texture = device.create_texture(&total_shadow_map_descriptor);
+			usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::TEXTURE_BINDING,
+		});
 		let total_shadow_map_texture_view =
-			total_shadow_map_texture.create_view(&wgpu::TextureViewDescriptor::default());
-		let total_shadow_map_sampler = device.create_sampler(&wgpu::SamplerDescriptor {
-			label: Some("Bouncing cube scene total shadow depth sampler"),
+			shadow_map_texture.create_view(&wgpu::TextureViewDescriptor::default());
+		let shadow_map_texture_views = (0..bouncing_cube_model.lights.len() as u32 * 6)
+			.map(|i| {
+				shadow_map_texture.create_view(&wgpu::TextureViewDescriptor {
+					label: Some("Bouncing cube scene shadow depth texture view"),
+					format: None,
+					dimension: Some(wgpu::TextureViewDimension::D2),
+					aspect: wgpu::TextureAspect::All,
+					base_mip_level: 0,
+					mip_level_count: None,
+					base_array_layer: i,
+					array_layer_count: std::num::NonZeroU32::new(1),
+				})
+			})
+			.collect::<Vec<_>>();
+		let shadow_map_sampler = device.create_sampler(&wgpu::SamplerDescriptor {
+			label: Some("Bouncing cube scene shadow depth sampler"),
 			mag_filter: wgpu::FilterMode::Linear,
 			min_filter: wgpu::FilterMode::Linear,
 			compare: Some(wgpu::CompareFunction::LessEqual),
 			..wgpu::SamplerDescriptor::default()
 		});
-		let total_shadow_map = crate::scene::utilities::texture::Texture {
-			texture: total_shadow_map_texture,
+		let shadow_map = crate::scene::utilities::texture::Texture {
+			texture: shadow_map_texture,
 			texture_view: total_shadow_map_texture_view,
-			sampler: total_shadow_map_sampler,
+			sampler: shadow_map_sampler,
 			sample_type: wgpu::TextureSampleType::Depth,
 			view_dimension: wgpu::TextureViewDimension::D2Array,
 			sampler_binding_type: wgpu::SamplerBindingType::Comparison,
 		};
-		let (total_shadow_map_bind_group_layout, total_shadow_map_bind_group) = total_shadow_map
-			.create_bind_group(
-				device,
-				"Bouncing cube scene total shadow",
-				wgpu::ShaderStages::FRAGMENT,
-			);
+		let (shadow_map_bind_group_layout, shadow_map_bind_group) = shadow_map.create_bind_group(
+			device,
+			"Bouncing cube scene shadow",
+			wgpu::ShaderStages::FRAGMENT,
+		);
 
 		// Create pipeline layout and pipeline for rendering.
 		let render_pipeline_layout =
@@ -255,7 +256,7 @@ impl BouncingCubeScene {
 				bind_group_layouts: &[
 					&render_camera_bind_group_layout,
 					&light_information_bind_group_layout,
-					&total_shadow_map_bind_group_layout,
+					&shadow_map_bind_group_layout,
 				],
 				push_constant_ranges: &[wgpu::PushConstantRange {
 					stages: wgpu::ShaderStages::FRAGMENT,
@@ -303,15 +304,15 @@ impl BouncingCubeScene {
 		});
 
 		// Create pipeline layout and pipeline for shadowmap construction.
-		let total_shadow_map_pipeline_layout =
+		let shadow_map_pipeline_layout =
 			device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
 				label: Some("Bouncing cube scene shadow pipeline layout"),
 				bind_group_layouts: &[&render_camera_bind_group_layout],
 				push_constant_ranges: &[],
 			});
-		let total_shadow_map_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+		let shadow_map_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
 			label: Some("Bouncing cube scene shadow pipeline"),
-			layout: Some(&total_shadow_map_pipeline_layout),
+			layout: Some(&shadow_map_pipeline_layout),
 			vertex: wgpu::VertexState {
 				module: &render_shader_module, // TODO: the shader module should be different
 				entry_point: "vertex_stage",
@@ -353,11 +354,10 @@ impl BouncingCubeScene {
 			light_information_buffer,
 			light_information_bind_group,
 			depth_texture,
-			shadow_map_size,
-			shadow_maps,
-			total_shadow_map,
-			total_shadow_map_bind_group,
-			total_shadow_map_pipeline,
+			shadow_map,
+			shadow_map_texture_views,
+			shadow_map_bind_group,
+			shadow_map_pipeline,
 		}
 	}
 }
@@ -390,36 +390,7 @@ impl crate::scene::Scene for BouncingCubeScene {
 		queue: &wgpu::Queue,
 		output_texture_view: &wgpu::TextureView,
 	) {
-		// TODO: use the total_shadow_map_pipeline to render to each of the shadow_maps (6 per light, each one in a different direction)
-
-		// Write each shadow map into a layer of total_shadow_map. TODO: this doesn't work -- the error says I need to copy from the whole depth texture, but that's what I am doing: I suspect
-		// the real error is that I'm not copying to the whole depth texture, which I am not doing (I'm only copying to a layer). I may need to write to a buffer first
-		for i in 0..self.shadow_maps.len() {
-			let shadow_map = &self.shadow_maps[i];
-			command_encoder.copy_texture_to_texture(
-				wgpu::ImageCopyTexture {
-					texture: &shadow_map.texture,
-					mip_level: 0,
-					origin: wgpu::Origin3d::ZERO,
-					aspect: wgpu::TextureAspect::DepthOnly,
-				},
-				wgpu::ImageCopyTexture {
-					texture: &self.total_shadow_map.texture,
-					mip_level: 0,
-					origin: wgpu::Origin3d {
-						x: 0,
-						y: 0,
-						z: i as u32,
-					},
-					aspect: wgpu::TextureAspect::DepthOnly,
-				},
-				wgpu::Extent3d {
-					width: self.shadow_map_size,
-					height: self.shadow_map_size,
-					depth_or_array_layers: 0, //1, // TODO: should be 1, not 0, but 1 errors
-				},
-			);
-		}
+		// TODO: use the shadow_map_pipeline to render to each of the shadow_map_texture_views (6 per light, each one in a different direction)
 
 		// Write instance data.
 		let instance_model_transforms =
@@ -536,7 +507,7 @@ impl crate::scene::Scene for BouncingCubeScene {
 		);
 		render_pass.set_bind_group(0, &self.render_camera_bind_group, &[]);
 		render_pass.set_bind_group(1, &self.light_information_bind_group, &[]);
-		render_pass.set_bind_group(2, &self.total_shadow_map_bind_group, &[]);
+		render_pass.set_bind_group(2, &self.shadow_map_bind_group, &[]);
 		render_pass.draw_indexed(0..6, 0, 0..11);
 	}
 }

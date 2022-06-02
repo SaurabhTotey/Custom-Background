@@ -31,8 +31,7 @@ impl Texture {
 			format: Self::DEPTH_FORMAT,
 			usage: wgpu::TextureUsages::RENDER_ATTACHMENT
 				| wgpu::TextureUsages::TEXTURE_BINDING
-				| wgpu::TextureUsages::COPY_SRC
-				| wgpu::TextureUsages::COPY_DST,
+				| wgpu::TextureUsages::COPY_SRC,
 		};
 		let texture = device.create_texture(&texture_descriptor);
 		let texture_view = texture.create_view(&wgpu::TextureViewDescriptor::default());
