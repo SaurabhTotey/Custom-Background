@@ -46,8 +46,8 @@ pub struct BouncingCubeScene {
 	render_pipeline: wgpu::RenderPipeline,
 	vertex_buffer: wgpu::Buffer,
 	index_buffer: wgpu::Buffer,
-	render_camera_uniform_buffer: wgpu::Buffer,
-	render_camera_bind_group: wgpu::BindGroup,
+	camera_uniform_buffer: wgpu::Buffer,
+	camera_bind_group: wgpu::BindGroup,
 	instance_buffer: wgpu::Buffer,
 	light_information_buffer: wgpu::Buffer,
 	light_information_bind_group: wgpu::BindGroup,
@@ -145,9 +145,9 @@ impl BouncingCubeScene {
 			usage: wgpu::BufferUsages::INDEX,
 		});
 		let (
-			render_camera_uniform_buffer,
-			render_camera_bind_group_layout,
-			render_camera_bind_group,
+			camera_uniform_buffer,
+			camera_bind_group_layout,
+			camera_bind_group,
 		) = bouncing_cube_model
 			.scene_camera
 			.create_bind_group(device, "Bouncing cube scene");
@@ -254,7 +254,7 @@ impl BouncingCubeScene {
 			device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
 				label: Some("Bouncing cube scene pipeline layout"),
 				bind_group_layouts: &[
-					&render_camera_bind_group_layout,
+					&camera_bind_group_layout,
 					&light_information_bind_group_layout,
 					&shadow_map_bind_group_layout,
 				],
@@ -307,7 +307,7 @@ impl BouncingCubeScene {
 		let shadow_map_pipeline_layout =
 			device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
 				label: Some("Bouncing cube scene shadow pipeline layout"),
-				bind_group_layouts: &[&render_camera_bind_group_layout],
+				bind_group_layouts: &[&camera_bind_group_layout],
 				push_constant_ranges: &[],
 			});
 		let shadow_map_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
@@ -348,8 +348,8 @@ impl BouncingCubeScene {
 			render_pipeline,
 			vertex_buffer,
 			index_buffer,
-			render_camera_uniform_buffer,
-			render_camera_bind_group,
+			camera_uniform_buffer,
+			camera_bind_group,
 			instance_buffer,
 			light_information_buffer,
 			light_information_bind_group,
@@ -390,8 +390,6 @@ impl crate::scene::Scene for BouncingCubeScene {
 		queue: &wgpu::Queue,
 		output_texture_view: &wgpu::TextureView,
 	) {
-		// TODO: use the shadow_map_pipeline to render to each of the shadow_map_texture_views (6 per light, each one in a different direction)
-
 		// Write instance data.
 		let instance_model_transforms =
 			std::iter::repeat(glam::Mat4::from_scale_rotation_translation(
@@ -438,9 +436,54 @@ impl crate::scene::Scene for BouncingCubeScene {
 			bytemuck::cast_slice(&instance_buffer_data),
 		);
 
+		// Use the shadow_map_pipeline to render to each of the shadow_map_texture_views (6 per light, each one in a different direction).
+		let look_and_right_directions = [
+			(glam::Vec3A::Z, glam::Vec3A::X),
+			(-glam::Vec3A::Z, -glam::Vec3A::X),
+			(glam::Vec3A::X, -glam::Vec3A::Z),
+			(-glam::Vec3A::X, glam::Vec3A::Z),
+			(glam::Vec3A::Y, glam::Vec3A::X),
+			(-glam::Vec3A::Y, glam::Vec3A::X),
+		];
+		let mut shadow_render_camera = crate::scene::utilities::camera::Camera::new(std::f32::consts::FRAC_PI_2, 1.0);
+		for i in 0..self.bouncing_cube_model.lights.len() {
+			let light = &self.bouncing_cube_model.lights[i];
+			for j in 0..look_and_right_directions.len() {
+				let shadow_map_texture_view =
+					&self.shadow_map_texture_views[i * look_and_right_directions.len() + j];
+				shadow_render_camera.position = light.position;
+				shadow_render_camera.look_direction = look_and_right_directions[j].0;
+				shadow_render_camera.look_direction = look_and_right_directions[j].1;
+				shadow_render_camera.recalculate_transformation_and_view_planes();
+				queue.write_buffer(
+					&self.camera_uniform_buffer,
+					0,
+					bytemuck::bytes_of(&shadow_render_camera.transformation),
+				);
+				let mut render_pass = command_encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+					label: Some("Bouncing cube scene shadow render pass"),
+					color_attachments: &[],
+					depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachment {
+						view: shadow_map_texture_view,
+						depth_ops: Some(wgpu::Operations {
+							load: wgpu::LoadOp::Clear(1.0),
+							store: true,
+						}),
+						stencil_ops: None,
+					}),
+				});
+				render_pass.set_pipeline(&self.shadow_map_pipeline);
+				render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
+				render_pass.set_vertex_buffer(1, self.instance_buffer.slice(..));
+				render_pass.set_index_buffer(self.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
+				render_pass.set_bind_group(0, &self.camera_bind_group, &[]);
+				render_pass.draw_indexed(0..6, 0, 0..11);
+			}
+		}
+
 		// Write uniforms.
 		queue.write_buffer(
-			&self.render_camera_uniform_buffer,
+			&self.camera_uniform_buffer,
 			0,
 			bytemuck::bytes_of(&self.bouncing_cube_model.scene_camera.transformation),
 		);
@@ -505,7 +548,7 @@ impl crate::scene::Scene for BouncingCubeScene {
 				self.bouncing_cube_model.scene_camera.position,
 			)),
 		);
-		render_pass.set_bind_group(0, &self.render_camera_bind_group, &[]);
+		render_pass.set_bind_group(0, &self.camera_bind_group, &[]);
 		render_pass.set_bind_group(1, &self.light_information_bind_group, &[]);
 		render_pass.set_bind_group(2, &self.shadow_map_bind_group, &[]);
 		render_pass.draw_indexed(0..6, 0, 0..11);
