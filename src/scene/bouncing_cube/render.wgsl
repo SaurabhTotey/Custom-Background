@@ -85,7 +85,8 @@ fn vertex_stage(vertex: VertexInput, instance: InstanceInput) -> FragmentInput {
 	);
 }
 
-fn calculate_light_contribution(light: LightInformationDatum, fragment: FragmentInput) -> vec3<f32> {
+fn calculate_light_contribution(index: i32, fragment: FragmentInput) -> vec3<f32> {
+	let light = light_information.i[index];
 	let distance_to_light = length(light.world_position - fragment.world_position.xyz);
 	let light_direction = normalize(light.world_position - fragment.world_position.xyz);
 	let view_direction = normalize(camera_position - fragment.world_position.xyz);
@@ -93,14 +94,15 @@ fn calculate_light_contribution(light: LightInformationDatum, fragment: Fragment
 	let specular_amount = pow(max(0.0, dot(fragment.normal.xyz, half_direction)), 128.0 * fragment.shininess);
 	let diffuse_amount = max(0.0, dot(fragment.normal.xyz, light_direction));
 	let attenuation = 1.0 / (light.constant_attenuation + distance_to_light * light.linear_attenuation + distance_to_light * distance_to_light * light.quadratic_attenuation);
-	return attenuation * (light.ambient_color * fragment.ambient_color + diffuse_amount * light.diffuse_color * fragment.diffuse_color + specular_amount * light.specular_color * fragment.specular_color);
+	let isShadow = 0.0; // TODO:
+	return attenuation * (light.ambient_color * fragment.ambient_color + (1.0 - isShadow) * (diffuse_amount * light.diffuse_color * fragment.diffuse_color + specular_amount * light.specular_color * fragment.specular_color));
 }
 
 @fragment
 fn fragment_stage(input: FragmentInput) -> FragmentOutput {
 	var color = vec3<f32>(0.0);
 	for (var i = 0; i < 3; i = i + 1) {
-		color = color + calculate_light_contribution(light_information.i[i], input);
+		color = color + calculate_light_contribution(i, input);
 	}
 	return FragmentOutput(vec4<f32>(color, 1.0));
 }
