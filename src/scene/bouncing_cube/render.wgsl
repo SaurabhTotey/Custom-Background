@@ -45,8 +45,13 @@ struct LightInformationDatum {
 struct LightInformation {
 	i: array<LightInformationDatum, 3>,
 };
+struct PushConstantData {
+	camera_position: vec3<f32>,
+	shadow_map_near_plane_distance: f32,
+	shadow_map_far_plane_distance: f32,
+};
 
-var<push_constant> camera_position: vec3<f32>;
+var<push_constant> push_constant_data: PushConstantData;
 @group(1) @binding(0)
 var<uniform> light_information: LightInformation;
 
@@ -89,7 +94,7 @@ fn calculate_light_contribution(light_index: i32, fragment: FragmentInput) -> ve
 	let light = light_information.i[light_index];
 	let distance_to_light = length(light.world_position - fragment.world_position.xyz);
 	let light_direction = normalize(light.world_position - fragment.world_position.xyz);
-	let view_direction = normalize(camera_position - fragment.world_position.xyz);
+	let view_direction = normalize(push_constant_data.camera_position - fragment.world_position.xyz);
 	let half_direction = normalize(view_direction + light_direction);
 	let specular_amount = pow(max(0.0, dot(fragment.normal.xyz, half_direction)), 128.0 * fragment.shininess);
 	let diffuse_amount = max(0.0, dot(fragment.normal.xyz, light_direction));

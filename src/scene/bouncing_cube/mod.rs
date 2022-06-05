@@ -40,6 +40,15 @@ struct LightInformationDatum {
 	_padding_4: u32,
 }
 
+#[repr(C)]
+#[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
+struct PushConstantData {
+	camera_position: [f32; 3],
+	_padding: u32,
+	near_plane_distance: f32,
+	far_plane_distance: f32,
+}
+
 pub struct BouncingCubeScene {
 	bouncing_cube_model: bouncing_cube_model::BouncingCubeSceneInformation,
 	quad_transforms: [glam::Mat4; 11],
@@ -257,7 +266,7 @@ impl BouncingCubeScene {
 				],
 				push_constant_ranges: &[wgpu::PushConstantRange {
 					stages: wgpu::ShaderStages::FRAGMENT,
-					range: 0..12, // a vec3 is 12 bytes (for 3 floats of 4 bytes each)
+					range: 0..std::mem::size_of::<PushConstantData>() as u32,
 				}],
 			});
 		let render_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
@@ -544,9 +553,12 @@ impl crate::scene::Scene for BouncingCubeScene {
 		render_pass.set_push_constants(
 			wgpu::ShaderStages::FRAGMENT,
 			0,
-			bytemuck::bytes_of(&glam::Vec3::from(
-				self.bouncing_cube_model.scene_camera.position,
-			)),
+			bytemuck::bytes_of(&PushConstantData {
+				camera_position: self.bouncing_cube_model.scene_camera.position.into(),
+				near_plane_distance: shadow_render_camera.near_plane_distance,
+				far_plane_distance: shadow_render_camera.far_plane_distance,
+				_padding: 0,
+			}),
 		);
 		render_pass.set_bind_group(0, &self.camera_bind_group, &[]);
 		render_pass.set_bind_group(1, &self.light_information_bind_group, &[]);
