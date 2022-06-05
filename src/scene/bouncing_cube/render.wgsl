@@ -118,8 +118,9 @@ fn calculate_light_contribution(light_index: i32, fragment: FragmentInput) -> ve
 		}
 	}
 	let shadow_map_index = 6 * light_index + index_of_best_compatibility;
-	// TODO: compare distance_to_light with the correct shadow map's depth value accounting for near and far clipping plane distortion
-	let isShadow = 0.0; // TODO:
+	// TODO: it seems like using fragment.clip_position is incorrect: I should be using the light's camera in the relevant direction times the fragment.world_position
+	let projection_position = fragment.clip_position.xy / fragment.clip_position.w * vec2<f32>(0.5, -0.5) + 0.5;
+	let isShadow = textureSampleCompare(total_shadow_map_textures, total_shadow_map_sampler, projection_position.xy, shadow_map_index, fragment.clip_position.z / fragment.clip_position.w);
 
 	return attenuation * (light.ambient_color * fragment.ambient_color + (1.0 - isShadow) * (diffuse_amount * light.diffuse_color * fragment.diffuse_color + specular_amount * light.specular_color * fragment.specular_color));
 }
