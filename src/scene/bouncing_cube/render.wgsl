@@ -53,7 +53,7 @@ var<uniform> light_information: LightInformation;
 @group(2) @binding(0)
 var total_shadow_map_textures: texture_depth_2d_array;
 @group(2) @binding(1)
-var total_shadow_map_sampler: sampler;
+var total_shadow_map_sampler: sampler_comparison;
 
 struct FragmentOutput {
 	@location(0) color: vec4<f32>,
@@ -85,8 +85,8 @@ fn vertex_stage(vertex: VertexInput, instance: InstanceInput) -> FragmentInput {
 	);
 }
 
-fn calculate_light_contribution(index: i32, fragment: FragmentInput) -> vec3<f32> {
-	let light = light_information.i[index];
+fn calculate_light_contribution(light_index: i32, fragment: FragmentInput) -> vec3<f32> {
+	let light = light_information.i[light_index];
 	let distance_to_light = length(light.world_position - fragment.world_position.xyz);
 	let light_direction = normalize(light.world_position - fragment.world_position.xyz);
 	let view_direction = normalize(camera_position - fragment.world_position.xyz);
@@ -94,7 +94,28 @@ fn calculate_light_contribution(index: i32, fragment: FragmentInput) -> vec3<f32
 	let specular_amount = pow(max(0.0, dot(fragment.normal.xyz, half_direction)), 128.0 * fragment.shininess);
 	let diffuse_amount = max(0.0, dot(fragment.normal.xyz, light_direction));
 	let attenuation = 1.0 / (light.constant_attenuation + distance_to_light * light.linear_attenuation + distance_to_light * distance_to_light * light.quadratic_attenuation);
+
+	var shadow_map_directions: array<vec3<f32>, 6> = array<vec3<f32>, 6>(
+		vec3<f32>(-1.0, 0.0, 0.0),
+		vec3<f32>(1.0, 0.0, 0.0),
+		vec3<f32>(0.0, 1.0, 0.0),
+		vec3<f32>(0.0, -1.0, 0.0),
+		vec3<f32>(0.0, 0.0, 1.0),
+		vec3<f32>(0.0, 0.0, -1.0),
+	);
+	var index_of_best_compatibility: i32 = -1;
+	var shadow_map_best_compatibility: f32 = -1.1;
+	for (var i = 0; i < 6; i = i + 1) {
+		let current_shadow_map_compatibility = dot(shadow_map_directions[i], -light_direction);
+		if current_shadow_map_compatibility > shadow_map_best_compatibility {
+			shadow_map_best_compatibility = current_shadow_map_compatibility;
+			index_of_best_compatibility = i;
+		}
+	}
+	let shadow_map_index = 6 * light_index + index_of_best_compatibility;
+	// TODO: compare distance_to_light with the correct shadow map's depth value accounting for near and far clipping plane distortion
 	let isShadow = 0.0; // TODO:
+
 	return attenuation * (light.ambient_color * fragment.ambient_color + (1.0 - isShadow) * (diffuse_amount * light.diffuse_color * fragment.diffuse_color + specular_amount * light.specular_color * fragment.specular_color));
 }
 
