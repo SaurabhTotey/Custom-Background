@@ -40,6 +40,7 @@ struct LightInformationDatum {
 	constant_attenuation: f32,
 	linear_attenuation: f32,
 	quadratic_attenuation: f32,
+	view_matrices: array<mat4x4<f32>, 6>,
 };
 // Well, this is annoying: I can't have the uniform be an array type, so I need it to be this wrapper type that has the array.
 struct LightInformation {
@@ -47,8 +48,6 @@ struct LightInformation {
 };
 struct PushConstantData {
 	camera_position: vec3<f32>,
-	shadow_map_near_plane_distance: f32,
-	shadow_map_far_plane_distance: f32,
 };
 
 var<push_constant> push_constant_data: PushConstantData;

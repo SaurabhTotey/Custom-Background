@@ -38,15 +38,13 @@ struct LightInformationDatum {
 	linear_attenuation: f32,
 	quadratic_attenuation: f32,
 	_padding_4: u32,
+	camera_transforms: [[[f32; 4]; 4]; 6],
 }
 
 #[repr(C)]
 #[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
 struct PushConstantData {
 	camera_position: [f32; 3],
-	_padding: u32,
-	near_plane_distance: f32,
-	far_plane_distance: f32,
 }
 
 pub struct BouncingCubeScene {
@@ -451,17 +449,21 @@ impl crate::scene::Scene for BouncingCubeScene {
 			(glam::Vec3A::Z, glam::Vec3A::X),
 			(-glam::Vec3A::Z, -glam::Vec3A::X),
 		];
-		let mut shadow_render_camera =
-			crate::scene::utilities::camera::Camera::new(std::f32::consts::FRAC_PI_2, 1.0);
+		let mut shadow_map_transforms = Vec::with_capacity(self.bouncing_cube_model.lights.len());
 		for i in 0..self.bouncing_cube_model.lights.len() {
 			let light = &self.bouncing_cube_model.lights[i];
+			shadow_map_transforms.push([[[0.0f32; 4]; 4]; 6]);
 			for j in 0..look_and_right_directions.len() {
 				let shadow_map_texture_view =
 					&self.shadow_map_texture_views[i * look_and_right_directions.len() + j];
+				let mut shadow_render_camera =
+					crate::scene::utilities::camera::Camera::new(std::f32::consts::FRAC_PI_2, 1.0);
 				shadow_render_camera.position = light.position;
 				shadow_render_camera.look_direction = look_and_right_directions[j].0;
 				shadow_render_camera.look_direction = look_and_right_directions[j].1;
 				shadow_render_camera.recalculate_transformation_and_view_planes();
+				shadow_map_transforms[i][j] =
+					shadow_render_camera.transformation.to_cols_array_2d();
 				queue.write_buffer(
 					&self.camera_uniform_buffer,
 					0,
@@ -504,7 +506,8 @@ impl crate::scene::Scene for BouncingCubeScene {
 					.bouncing_cube_model
 					.lights
 					.iter()
-					.map(|light| LightInformationDatum {
+					.enumerate()
+					.map(|(i, light)| LightInformationDatum {
 						position: light.position.into(),
 						ambient_color: light.ambient_light,
 						diffuse_color: light.diffuse_light,
@@ -512,6 +515,7 @@ impl crate::scene::Scene for BouncingCubeScene {
 						constant_attenuation: light.constant_attenuation,
 						linear_attenuation: light.linear_attenuation,
 						quadratic_attenuation: light.quadratic_attenuation,
+						camera_transforms: shadow_map_transforms[i],
 						_padding_0: 0,
 						_padding_1: 0,
 						_padding_2: 0,
@@ -555,9 +559,6 @@ impl crate::scene::Scene for BouncingCubeScene {
 			0,
 			bytemuck::bytes_of(&PushConstantData {
 				camera_position: self.bouncing_cube_model.scene_camera.position.into(),
-				near_plane_distance: shadow_render_camera.near_plane_distance,
-				far_plane_distance: shadow_render_camera.far_plane_distance,
-				_padding: 0,
 			}),
 		);
 		render_pass.set_bind_group(0, &self.camera_bind_group, &[]);
