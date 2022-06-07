@@ -90,7 +90,7 @@ fn vertex_stage(vertex: VertexInput, instance: InstanceInput) -> FragmentInput {
 }
 
 fn calculate_light_contribution(light_index: i32, fragment: FragmentInput) -> vec3<f32> {
-	let light = light_information.i[light_index];
+	var light = light_information.i[light_index];
 	let distance_to_light = length(light.world_position - fragment.world_position.xyz);
 	let light_direction = normalize(light.world_position - fragment.world_position.xyz);
 	let view_direction = normalize(push_constant_data.camera_position - fragment.world_position.xyz);
@@ -117,10 +117,12 @@ fn calculate_light_contribution(light_index: i32, fragment: FragmentInput) -> ve
 		}
 	}
 	let shadow_map_index = 6 * light_index + index_of_best_compatibility;
-	// TODO: it seems like using fragment.clip_position is incorrect: I should be using the light's camera in the relevant direction times the fragment.world_position
-	let projection_position = fragment.clip_position.xy / fragment.clip_position.w * vec2<f32>(0.5, -0.5) + 0.5;
-	let isShadow = textureSampleCompare(total_shadow_map_textures, total_shadow_map_sampler, projection_position.xy, shadow_map_index, fragment.clip_position.z / fragment.clip_position.w);
-
+	let clip_position = light.view_matrices[index_of_best_compatibility] * fragment.world_position;
+	let projection_position = clip_position.xy * vec2<f32>(0.5, -0.5) / clip_position.w + vec2<f32>(0.5, 0.5);
+	var isShadow = textureSampleCompare(total_shadow_map_textures, total_shadow_map_sampler, projection_position.xy, shadow_map_index, clip_position.z / clip_position.w);
+	if clip_position.w <= 0.0 {
+		isShadow = 0.0;
+	}
 	return attenuation * (light.ambient_color * fragment.ambient_color + (1.0 - isShadow) * (diffuse_amount * light.diffuse_color * fragment.diffuse_color + specular_amount * light.specular_color * fragment.specular_color));
 }
 
