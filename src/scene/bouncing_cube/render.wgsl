@@ -40,7 +40,7 @@ struct LightInformationDatum {
 	constant_attenuation: f32,
 	linear_attenuation: f32,
 	quadratic_attenuation: f32,
-	view_matrices: array<mat4x4<f32>, 6>,
+	view_matrices: array<mat4x4<f32>, 6>, // TODO: name is bad: this is a view and projection matrix
 };
 // Well, this is annoying: I can't have the uniform be an array type, so I need it to be this wrapper type that has the array.
 struct LightInformation {
@@ -99,31 +99,20 @@ fn calculate_light_contribution(light_index: i32, fragment: FragmentInput) -> ve
 	let diffuse_amount = max(0.0, dot(fragment.normal.xyz, light_direction));
 	let attenuation = 1.0 / (light.constant_attenuation + distance_to_light * light.linear_attenuation + distance_to_light * distance_to_light * light.quadratic_attenuation);
 
-	var shadow_map_directions: array<vec3<f32>, 6> = array<vec3<f32>, 6>(
-		vec3<f32>(-1.0, 0.0, 0.0),
-		vec3<f32>(1.0, 0.0, 0.0),
-		vec3<f32>(0.0, 1.0, 0.0),
-		vec3<f32>(0.0, -1.0, 0.0),
-		vec3<f32>(0.0, 0.0, 1.0),
-		vec3<f32>(0.0, 0.0, -1.0),
-	);
-	var index_of_best_compatibility: i32 = -1;
-	var shadow_map_best_compatibility: f32 = -1.1;
+	var is_in_shadow = 0.0;
 	for (var i = 0; i < 6; i = i + 1) {
-		let current_shadow_map_compatibility = dot(shadow_map_directions[i], -light_direction);
-		if current_shadow_map_compatibility > shadow_map_best_compatibility {
-			shadow_map_best_compatibility = current_shadow_map_compatibility;
-			index_of_best_compatibility = i;
+		let shadow_map_index = 6 * light_index + i;
+		let clip_position = light.view_matrices[i] * fragment.world_position;
+		if clip_position.w <= 0.0 || abs(clip_position.x / clip_position.w) > 1.0 || abs(clip_position.y / clip_position.w) > 1.0 || abs(clip_position.z / clip_position.w) > 1.0 {
+			continue;
+		}
+		let projection_position = clip_position.xy * vec2<f32>(0.5, -0.5) / clip_position.w + vec2<f32>(0.5, 0.5);
+		is_in_shadow = 1.0 - textureSampleCompare(total_shadow_map_textures, total_shadow_map_sampler, projection_position, shadow_map_index, clip_position.z / clip_position.w);
+		if is_in_shadow == 1.0 {
+			break;
 		}
 	}
-	let shadow_map_index = 6 * light_index + index_of_best_compatibility;
-	let clip_position = light.view_matrices[index_of_best_compatibility] * fragment.world_position;
-	let projection_position = clip_position.xy * vec2<f32>(0.5, -0.5) / clip_position.w + vec2<f32>(0.5, 0.5);
-	var isShadow = textureSampleCompare(total_shadow_map_textures, total_shadow_map_sampler, projection_position.xy, shadow_map_index, clip_position.z / clip_position.w);
-	if clip_position.w <= 0.0 {
-		isShadow = 0.0;
-	}
-	return attenuation * (light.ambient_color * fragment.ambient_color + (1.0 - isShadow) * (diffuse_amount * light.diffuse_color * fragment.diffuse_color + specular_amount * light.specular_color * fragment.specular_color));
+	return attenuation * (light.ambient_color * fragment.ambient_color + (1.0 - is_in_shadow) * (diffuse_amount * light.diffuse_color * fragment.diffuse_color + specular_amount * light.specular_color * fragment.specular_color));
 }
 
 @fragment
