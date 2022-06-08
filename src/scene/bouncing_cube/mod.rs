@@ -340,7 +340,11 @@ impl BouncingCubeScene {
 				depth_write_enabled: true,
 				depth_compare: wgpu::CompareFunction::Less,
 				stencil: wgpu::StencilState::default(),
-				bias: wgpu::DepthBiasState::default(),
+				bias: wgpu::DepthBiasState {
+					constant: 2,
+					slope_scale: 2.0,
+					clamp: 0.0,
+				},
 			}),
 			multisample: wgpu::MultisampleState::default(),
 			multiview: None,
@@ -441,26 +445,24 @@ impl crate::scene::Scene for BouncingCubeScene {
 		);
 
 		// Use the shadow_map_pipeline to render to each of the shadow_map_texture_views (6 per light, each one in a different direction).
-		let look_and_right_directions = [
-			(-glam::Vec3A::X, glam::Vec3A::Z),
-			(glam::Vec3A::X, -glam::Vec3A::Z),
-			(glam::Vec3A::Y, glam::Vec3A::X),
-			(-glam::Vec3A::Y, glam::Vec3A::X),
-			(glam::Vec3A::Z, glam::Vec3A::X),
-			(-glam::Vec3A::Z, -glam::Vec3A::X),
+		let look_directions = [
+			-glam::Vec3A::X,
+			glam::Vec3A::X,
+			glam::Vec3A::Y,
+			-glam::Vec3A::Y,
+			glam::Vec3A::Z,
+			-glam::Vec3A::Z,
 		];
 		let mut shadow_map_transforms = Vec::with_capacity(self.bouncing_cube_model.lights.len());
 		for i in 0..self.bouncing_cube_model.lights.len() {
 			let light = &self.bouncing_cube_model.lights[i];
 			shadow_map_transforms.push([[[0.0f32; 4]; 4]; 6]);
-			for j in 0..look_and_right_directions.len() {
-				let shadow_map_texture_view =
-					&self.shadow_map_texture_views[i * look_and_right_directions.len() + j];
+			for j in 0..6 {
+				let shadow_map_texture_view = &self.shadow_map_texture_views[i * 6 + j];
 				let mut shadow_render_camera =
 					crate::scene::utilities::camera::Camera::new(std::f32::consts::FRAC_PI_2, 1.0);
 				shadow_render_camera.position = light.position;
-				shadow_render_camera.look_direction = look_and_right_directions[j].0;
-				shadow_render_camera.look_direction = look_and_right_directions[j].1;
+				shadow_render_camera.look_direction = look_directions[j];
 				shadow_render_camera.recalculate_transformation_and_view_planes();
 				shadow_map_transforms[i][j] =
 					shadow_render_camera.transformation.to_cols_array_2d();
