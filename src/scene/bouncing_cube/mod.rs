@@ -334,7 +334,10 @@ impl BouncingCubeScene {
 				],
 			},
 			fragment: None,
-			primitive: wgpu::PrimitiveState::default(),
+			primitive: wgpu::PrimitiveState {
+				unclipped_depth: true,
+				..wgpu::PrimitiveState::default()
+			},
 			depth_stencil: Some(wgpu::DepthStencilState {
 				format: crate::scene::utilities::texture::Texture::DEPTH_FORMAT,
 				depth_write_enabled: true,

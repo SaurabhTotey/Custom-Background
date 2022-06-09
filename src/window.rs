@@ -58,7 +58,7 @@ impl DemoWindow {
 			.request_device(
 				&wgpu::DeviceDescriptor {
 					label: Some("Default device"),
-					features: wgpu::Features::PUSH_CONSTANTS,
+					features: wgpu::Features::PUSH_CONSTANTS | wgpu::Features::DEPTH_CLIP_CONTROL,
 					limits: wgpu::Limits {
 						max_push_constant_size: 128,
 						..wgpu::Limits::default()

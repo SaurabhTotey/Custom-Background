@@ -40,7 +40,7 @@ struct LightInformationDatum {
 	constant_attenuation: f32,
 	linear_attenuation: f32,
 	quadratic_attenuation: f32,
-	view_matrices: array<mat4x4<f32>, 6>, // TODO: name is bad: this is a view and projection matrix
+	camera_transformations: array<mat4x4<f32>, 6>,
 };
 // Well, this is annoying: I can't have the uniform be an array type, so I need it to be this wrapper type that has the array.
 struct LightInformation {
@@ -99,20 +99,20 @@ fn calculate_light_contribution(light_index: i32, fragment: FragmentInput) -> ve
 	let diffuse_amount = max(0.0, dot(fragment.normal.xyz, light_direction));
 	let attenuation = 1.0 / (light.constant_attenuation + distance_to_light * light.linear_attenuation + distance_to_light * distance_to_light * light.quadratic_attenuation);
 
-	var is_in_shadow = 0.0;
+	var shadow_multiplier = 1.0;
 	for (var i = 0; i < 6; i = i + 1) {
 		let shadow_map_index = 6 * light_index + i;
-		let clip_position = light.view_matrices[i] * fragment.world_position;
+		let clip_position = light.camera_transformations[i] * fragment.world_position;
 		if clip_position.w <= 0.0 || abs(clip_position.x / clip_position.w) > 1.0 || abs(clip_position.y / clip_position.w) > 1.0 || abs(clip_position.z / clip_position.w) > 1.0 {
 			continue;
 		}
 		let projection_position = clip_position.xy * vec2<f32>(0.5, -0.5) / clip_position.w + vec2<f32>(0.5, 0.5);
-		is_in_shadow = 1.0 - textureSampleCompare(total_shadow_map_textures, total_shadow_map_sampler, projection_position, shadow_map_index, clip_position.z / clip_position.w);
-		if is_in_shadow == 1.0 {
+		shadow_multiplier = textureSampleCompare(total_shadow_map_textures, total_shadow_map_sampler, projection_position, shadow_map_index, clip_position.z / clip_position.w);
+		if shadow_multiplier == 0.0 {
 			break;
 		}
 	}
-	return attenuation * (light.ambient_color * fragment.ambient_color + (1.0 - is_in_shadow) * (diffuse_amount * light.diffuse_color * fragment.diffuse_color + specular_amount * light.specular_color * fragment.specular_color));
+	return attenuation * (light.ambient_color * fragment.ambient_color + shadow_multiplier * (diffuse_amount * light.diffuse_color * fragment.diffuse_color + specular_amount * light.specular_color * fragment.specular_color));
 }
 
 @fragment
