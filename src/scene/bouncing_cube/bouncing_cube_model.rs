@@ -55,7 +55,7 @@ impl BouncingCubeSceneInformation {
 		let y_bound = (field_of_view / 2.0).tan() * (-1.0 - scene_camera.position.z);
 		let x_bound = y_bound * aspect_ratio;
 		let z_bound = 1.0;
-		let side_length = 0.2;
+		let side_length = x_bound.min(y_bound).min(z_bound) / 6.0;
 		let cube_semi_diagonal_length = f32::sqrt(3.0 * (side_length / 2.0) * (side_length / 2.0));
 		let mut rng = rand::thread_rng();
 		let cube = CubeInformation {
