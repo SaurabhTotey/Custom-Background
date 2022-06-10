@@ -451,8 +451,8 @@ impl crate::scene::Scene for BouncingCubeScene {
 		let look_directions = [
 			-glam::Vec3A::X,
 			glam::Vec3A::X,
-			glam::Vec3A::Y,
-			-glam::Vec3A::Y,
+			glam::Vec3A::new(0.01, 0.999899994999, 0.01), // TODO: this is a bad hack because the look direction can't be parallel to the up direction
+			-glam::Vec3A::new(0.01, 0.999899994999, 0.01), // TODO: this is a bad hack because the look direction can't be parallel to the up direction
 			glam::Vec3A::Z,
 			-glam::Vec3A::Z,
 		];
