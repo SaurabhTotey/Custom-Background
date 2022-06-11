@@ -39,6 +39,8 @@ struct LightInformationDatum {
 	quadratic_attenuation: f32,
 	_padding_4: u32,
 	camera_transforms: [[[f32; 4]; 4]; 6],
+	_padding_5: [u32; 9],
+	test_value: i32,
 }
 
 #[repr(C)]
@@ -526,6 +528,8 @@ impl crate::scene::Scene for BouncingCubeScene {
 						_padding_2: 0,
 						_padding_3: 0,
 						_padding_4: 0,
+						_padding_5: [0; 9],
+						test_value: 46,
 					})
 					.collect::<Vec<_>>(),
 			),

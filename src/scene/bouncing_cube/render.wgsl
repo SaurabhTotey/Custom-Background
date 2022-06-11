@@ -41,6 +41,7 @@ struct LightInformationDatum {
 	linear_attenuation: f32,
 	quadratic_attenuation: f32,
 	camera_transformations: array<mat4x4<f32>, 6>,
+	test_value: i32,
 };
 // Well, this is annoying: I can't have the uniform be an array type, so I need it to be this wrapper type that has the array.
 struct LightInformation {
@@ -122,6 +123,9 @@ fn calculate_light_contribution(light_index: i32, fragment: FragmentInput) -> ve
 	var shadow_multiplier = textureSampleCompare(total_shadow_map_textures, total_shadow_map_sampler, projection_position, shadow_map_index, clip_position.z / clip_position.w);
 	if clip_position.w <= 0.0 || abs(clip_position.x / clip_position.w) > 1.0 || abs(clip_position.y / clip_position.w) > 1.0 || abs(clip_position.z / clip_position.w) > 1.0 {
 		shadow_multiplier = 1.0;
+	}
+	if light.test_value != 46 {
+		return vec3<f32>(1.0); // TODO: if this is getting tripped (it is), that means we're facing an alignment issue of some sort
 	}
 	return attenuation * (light.ambient_color * fragment.ambient_color + shadow_multiplier * (diffuse_amount * light.diffuse_color * fragment.diffuse_color + specular_amount * light.specular_color * fragment.specular_color));
 }
