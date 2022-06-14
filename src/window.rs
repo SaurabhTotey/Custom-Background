@@ -3,7 +3,7 @@ use crate::scene::Scene;
 use winit::{
 	event::{Event, WindowEvent},
 	event_loop::{ControlFlow, EventLoop},
-	//platform::unix::{WindowBuilderExtUnix, XWindowType},
+	platform::unix::{WindowBuilderExtUnix, XWindowType},
 	window::{Window, WindowBuilder},
 };
 
@@ -30,8 +30,8 @@ impl DemoWindow {
 			let monitor_size = event_loop.primary_monitor().unwrap().size();
 			WindowBuilder::new()
 				.with_inner_size(monitor_size)
-				//.with_x11_window_type(vec![XWindowType::Desktop])
-				//.with_override_redirect(true)
+				.with_x11_window_type(vec![XWindowType::Desktop])
+				.with_override_redirect(true)
 				.build(event_loop)
 				.unwrap()
 		} else {
