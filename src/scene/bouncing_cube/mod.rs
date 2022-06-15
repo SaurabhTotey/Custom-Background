@@ -39,8 +39,7 @@ struct LightInformationDatum {
 	quadratic_attenuation: f32,
 	_padding_4: u32,
 	camera_transforms: [[[f32; 4]; 4]; 6],
-	_padding_5: [i32; 9],
-	test_value: i32,
+	test_value: [i32; 4],
 }
 
 #[repr(C)]
@@ -523,13 +522,12 @@ impl crate::scene::Scene for BouncingCubeScene {
 						linear_attenuation: light.linear_attenuation,
 						quadratic_attenuation: light.quadratic_attenuation,
 						camera_transforms: shadow_map_transforms[i],
-						_padding_0: 46,
-						_padding_1: 46,
-						_padding_2: 46,
-						_padding_3: 46,
-						_padding_4: 46,
-						_padding_5: [46; 9],
-						test_value: 46,
+						_padding_0: 0,
+						_padding_1: 0,
+						_padding_2: 0,
+						_padding_3: 0,
+						_padding_4: 0,
+						test_value: [46, 0, 0, 0],
 					})
 					.collect::<Vec<_>>(),
 			),

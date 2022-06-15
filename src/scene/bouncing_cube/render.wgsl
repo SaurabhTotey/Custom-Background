@@ -125,7 +125,7 @@ fn calculate_light_contribution(light_index: i32, fragment: FragmentInput) -> ve
 		shadow_multiplier = 1.0;
 	}
 	if light.test_value != 46 {
-		return vec3<f32>(1.0); // TODO: if this is getting tripped (it is), that means we're facing an alignment issue of some sort
+		return vec3<f32>(1.0); // TODO: if this is getting tripped (it isn't), that means we're facing an alignment issue of some sort
 	}
 	return attenuation * (light.ambient_color * fragment.ambient_color + shadow_multiplier * (diffuse_amount * light.diffuse_color * fragment.diffuse_color + specular_amount * light.specular_color * fragment.specular_color));
 }
