@@ -40,8 +40,7 @@ struct LightInformationDatum {
 	constant_attenuation: f32,
 	linear_attenuation: f32,
 	quadratic_attenuation: f32,
-	camera_transformations: array<mat4x4<f32>, 6>,
-	test_value: i32,
+	camera_transformation: mat4x4<f32>,
 };
 // Well, this is annoying: I can't have the uniform be an array type, so I need it to be this wrapper type that has the array.
 struct LightInformation {
@@ -100,32 +99,15 @@ fn calculate_light_contribution(light_index: i32, fragment: FragmentInput) -> ve
 	let diffuse_amount = max(0.0, dot(fragment.normal.xyz, light_direction));
 	let attenuation = 1.0 / (light.constant_attenuation + distance_to_light * light.linear_attenuation + distance_to_light * distance_to_light * light.quadratic_attenuation);
 
-	var shadow_map_directions: array<vec3<f32>, 6> = array<vec3<f32>, 6>(
-		vec3<f32>(-1.0, 0.0, 0.0),
-		vec3<f32>(1.0, 0.0, 0.0),
-		vec3<f32>(0.0, 1.0, 0.0),
-		vec3<f32>(0.0, -1.0, 0.0),
-		vec3<f32>(0.0, 0.0, 1.0),
-		vec3<f32>(0.0, 0.0, -1.0),
-	);
-	var index_of_best_compatibility: i32 = -1;
-	var shadow_map_best_compatibility: f32 = -1.1;
-	for (var i = 0; i < 6; i = i + 1) {
-		let current_shadow_map_compatibility = dot(shadow_map_directions[i], -light_direction);
-		if current_shadow_map_compatibility > shadow_map_best_compatibility {
-			shadow_map_best_compatibility = current_shadow_map_compatibility;
-			index_of_best_compatibility = i;
-		}
-	}
-	let shadow_map_index = 6 * light_index + index_of_best_compatibility;
-	let clip_position = light.camera_transformations[index_of_best_compatibility] * fragment.world_position;
-	let projection_position = clip_position.xy * vec2<f32>(0.5, -0.5) / clip_position.w + vec2<f32>(0.5, 0.5);
-	var shadow_multiplier = textureSampleCompare(total_shadow_map_textures, total_shadow_map_sampler, projection_position, shadow_map_index, clip_position.z / clip_position.w);
-	if clip_position.w <= 0.0 || abs(clip_position.x / clip_position.w) > 1.0 || abs(clip_position.y / clip_position.w) > 1.0 || abs(clip_position.z / clip_position.w) > 1.0 {
+	let clip_position_according_to_light = light.camera_transformation * fragment.world_position;
+	let projection_correction = 1.0 / clip_position_according_to_light.w;
+	let projection_position = clip_position_according_to_light.xy * vec2<f32>(0.5, -0.5) * projection_correction + vec2<f32>(0.5, 0.5);
+	var shadow_multiplier = textureSampleCompare(total_shadow_map_textures, total_shadow_map_sampler, projection_position, light_index, clip_position_according_to_light.z * projection_correction);
+	if clip_position_according_to_light.w <= 0.0 {
 		shadow_multiplier = 1.0;
 	}
-	if light.test_value != 46 {
-		return vec3<f32>(1.0); // TODO: if this is getting tripped (it isn't), that means we're facing an alignment issue of some sort
+	if abs(clip_position_according_to_light.x / clip_position_according_to_light.w) > 1.0 || abs(clip_position_according_to_light.y / clip_position_according_to_light.w) > 1.0 || abs(clip_position_according_to_light.z / clip_position_according_to_light.w) > 1.0  {
+		shadow_multiplier = 0.0;
 	}
 	return attenuation * (light.ambient_color * fragment.ambient_color + shadow_multiplier * (diffuse_amount * light.diffuse_color * fragment.diffuse_color + specular_amount * light.specular_color * fragment.specular_color));
 }
