@@ -42,17 +42,13 @@ struct LightInformationDatum {
 	quadratic_attenuation: f32,
 	camera_transformation: mat4x4<f32>,
 };
-// Well, this is annoying: I can't have the uniform be an array type, so I need it to be this wrapper type that has the array.
-struct LightInformation {
-	i: array<LightInformationDatum, 3>,
-};
 struct PushConstantData {
 	camera_position: vec3<f32>,
 };
 
 var<push_constant> push_constant_data: PushConstantData;
 @group(1) @binding(0)
-var<uniform> light_information: LightInformation;
+var<uniform> light_information: array<LightInformationDatum, 3>;
 
 @group(2) @binding(0)
 var total_shadow_map_textures: texture_depth_2d_array;
@@ -90,7 +86,7 @@ fn vertex_stage(vertex: VertexInput, instance: InstanceInput) -> FragmentInput {
 }
 
 fn calculate_light_contribution(light_index: i32, fragment: FragmentInput) -> vec3<f32> {
-	var light = light_information.i[light_index];
+	var light = light_information[light_index];
 	let distance_to_light = length(light.world_position - fragment.world_position.xyz);
 	let light_direction = normalize(light.world_position - fragment.world_position.xyz);
 	let view_direction = normalize(push_constant_data.camera_position - fragment.world_position.xyz);
@@ -105,9 +101,6 @@ fn calculate_light_contribution(light_index: i32, fragment: FragmentInput) -> ve
 	var shadow_multiplier = textureSampleCompare(total_shadow_map_textures, total_shadow_map_sampler, projection_position, light_index, clip_position_according_to_light.z * projection_correction);
 	if clip_position_according_to_light.w <= 0.0 {
 		shadow_multiplier = 1.0;
-	}
-	if abs(clip_position_according_to_light.x / clip_position_according_to_light.w) > 1.0 || abs(clip_position_according_to_light.y / clip_position_according_to_light.w) > 1.0 || abs(clip_position_according_to_light.z / clip_position_according_to_light.w) > 1.0  {
-		shadow_multiplier = 0.0;
 	}
 	return attenuation * (light.ambient_color * fragment.ambient_color + shadow_multiplier * (diffuse_amount * light.diffuse_color * fragment.diffuse_color + specular_amount * light.specular_color * fragment.specular_color));
 }

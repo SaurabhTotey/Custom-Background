@@ -3,7 +3,8 @@ use wgpu::util::DeviceExt;
 
 /**
  * TODO:
- *  * remove all traces of shadow mapping and try to put it back in again
+ *  * try figuring out cube map sampling and replicate something similar in the shader
+ *  * if above doesn't work, remove all traces of shadow mapping and try to put it back in again
  *  * shadow mapping for point lights
  */
 
@@ -448,7 +449,7 @@ impl crate::scene::Scene for BouncingCubeScene {
 			bytemuck::cast_slice(&instance_buffer_data),
 		);
 
-		// TODO: rework for all directions
+		// TODO: rework for all directions rather than just one
 		let mut shadow_map_transforms = Vec::with_capacity(self.bouncing_cube_model.lights.len());
 		for i in 0..self.bouncing_cube_model.lights.len() {
 			let light = &self.bouncing_cube_model.lights[i];
@@ -456,7 +457,6 @@ impl crate::scene::Scene for BouncingCubeScene {
 			let mut shadow_render_camera =
 				crate::scene::utilities::camera::Camera::new(std::f32::consts::FRAC_PI_2, 1.0);
 			shadow_render_camera.position = light.position;
-			shadow_render_camera.look_direction = glam::Vec3A::Z;
 			shadow_render_camera.recalculate_transformation_and_view_planes();
 			shadow_map_transforms.push(shadow_render_camera.transformation.to_cols_array_2d());
 			queue.write_buffer(
