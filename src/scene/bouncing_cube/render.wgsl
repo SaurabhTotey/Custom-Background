@@ -40,7 +40,7 @@ struct LightInformationDatum {
 	constant_attenuation: f32,
 	linear_attenuation: f32,
 	quadratic_attenuation: f32,
-	camera_transformation: mat4x4<f32>,
+	camera_transformations: array<mat4x4<f32>, 6>,
 };
 struct PushConstantData {
 	camera_position: vec3<f32>,
@@ -95,12 +95,15 @@ fn calculate_light_contribution(light_index: i32, fragment: FragmentInput) -> ve
 	let diffuse_amount = max(0.0, dot(fragment.normal.xyz, light_direction));
 	let attenuation = 1.0 / (light.constant_attenuation + distance_to_light * light.linear_attenuation + distance_to_light * distance_to_light * light.quadratic_attenuation);
 
-	let clip_position_according_to_light = light.camera_transformation * fragment.world_position;
-	let projection_correction = 1.0 / clip_position_according_to_light.w;
-	let projection_position = clip_position_according_to_light.xy * vec2<f32>(0.5, -0.5) * projection_correction + vec2<f32>(0.5, 0.5);
-	var shadow_multiplier = textureSampleCompare(total_shadow_map_textures, total_shadow_map_sampler, projection_position, light_index, clip_position_according_to_light.z * projection_correction);
-	if clip_position_according_to_light.w <= 0.0 {
-		shadow_multiplier = 1.0;
+	var shadow_multiplier = 1.0;
+	for (var i = 0; i < 6; i = i + 1) {
+		let clip_position_according_to_light = light.camera_transformations[i] * fragment.world_position;
+		if clip_position_according_to_light.w <= 0.0 {
+			continue;
+		}
+		let projection_correction = 1.0 / clip_position_according_to_light.w;
+		let projection_position = clip_position_according_to_light.xy * vec2<f32>(0.5, -0.5) * projection_correction + vec2<f32>(0.5, 0.5);
+		shadow_multiplier *= textureSampleCompare(total_shadow_map_textures, total_shadow_map_sampler, projection_position, 6 * light_index + i, clip_position_according_to_light.z * projection_correction);
 	}
 	return attenuation * (light.ambient_color * fragment.ambient_color + shadow_multiplier * (diffuse_amount * light.diffuse_color * fragment.diffuse_color + specular_amount * light.specular_color * fragment.specular_color));
 }

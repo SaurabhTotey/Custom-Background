@@ -40,7 +40,7 @@ struct LightInformationDatum {
 	linear_attenuation: f32,
 	quadratic_attenuation: f32,
 	_padding_4: u32,
-	camera_transform: [[f32; 4]; 4],
+	camera_transforms: [[[f32; 4]; 4]; 6],
 }
 
 #[repr(C)]
@@ -207,7 +207,7 @@ impl BouncingCubeScene {
 		let shadow_map_extent = wgpu::Extent3d {
 			width: shadow_map_size,
 			height: shadow_map_size,
-			depth_or_array_layers: bouncing_cube_model.lights.len() as u32,
+			depth_or_array_layers: bouncing_cube_model.lights.len() as u32 * 6,
 		};
 		let shadow_map_texture = device.create_texture(&wgpu::TextureDescriptor {
 			label: Some("Bouncing cube scene shadow depth texture"),
@@ -220,7 +220,7 @@ impl BouncingCubeScene {
 		});
 		let total_shadow_map_texture_view =
 			shadow_map_texture.create_view(&wgpu::TextureViewDescriptor::default());
-		let shadow_map_texture_views = (0..bouncing_cube_model.lights.len() as u32)
+		let shadow_map_texture_views = (0..bouncing_cube_model.lights.len() as u32 * 6)
 			.map(|i| {
 				shadow_map_texture.create_view(&wgpu::TextureViewDescriptor {
 					label: Some("Bouncing cube scene shadow depth texture view"),
@@ -449,39 +449,49 @@ impl crate::scene::Scene for BouncingCubeScene {
 			bytemuck::cast_slice(&instance_buffer_data),
 		);
 
-		// TODO: rework for all directions rather than just one
-		let mut shadow_map_transforms = Vec::with_capacity(self.bouncing_cube_model.lights.len());
+		let look_directions = [
+			-glam::Vec3A::X,
+			glam::Vec3A::X,
+			glam::Vec3A::new(0.01, 0.999899994999, 0.01), // TODO: this is a bad hack because the look direction can't be parallel to the up direction
+			-glam::Vec3A::new(0.01, 0.999899994999, 0.01), // TODO: this is a bad hack because the look direction can't be parallel to the up direction
+			glam::Vec3A::Z,
+			-glam::Vec3A::Z,
+		];
+		let mut shadow_map_transforms = Vec::from([[[[0.0; 4]; 4]; 6]; 3]);
 		for i in 0..self.bouncing_cube_model.lights.len() {
 			let light = &self.bouncing_cube_model.lights[i];
-			let shadow_map_texture_view = &self.shadow_map_texture_views[i];
-			let mut shadow_render_camera =
-				crate::scene::utilities::camera::Camera::new(std::f32::consts::FRAC_PI_2, 1.0);
-			shadow_render_camera.position = light.position;
-			shadow_render_camera.recalculate_transformation_and_view_planes();
-			shadow_map_transforms.push(shadow_render_camera.transformation.to_cols_array_2d());
-			queue.write_buffer(
-				&self.camera_uniform_buffer,
-				0,
-				bytemuck::bytes_of(&shadow_render_camera.transformation),
-			);
-			let mut render_pass = command_encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-				label: Some("Bouncing cube scene shadow render pass"),
-				color_attachments: &[],
-				depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachment {
-					view: shadow_map_texture_view,
-					depth_ops: Some(wgpu::Operations {
-						load: wgpu::LoadOp::Clear(1.0),
-						store: true,
+			for j in 0..6 {
+				let shadow_map_texture_view = &self.shadow_map_texture_views[i * 6 + j];
+				let mut shadow_render_camera =
+					crate::scene::utilities::camera::Camera::new(std::f32::consts::FRAC_PI_2, 1.0);
+				shadow_render_camera.position = light.position;
+				shadow_render_camera.look_direction = look_directions[j];
+				shadow_render_camera.recalculate_transformation_and_view_planes();
+				shadow_map_transforms[i][j] = shadow_render_camera.transformation.to_cols_array_2d();
+				queue.write_buffer(
+					&self.camera_uniform_buffer,
+					0,
+					bytemuck::bytes_of(&shadow_render_camera.transformation),
+				);
+				let mut render_pass = command_encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+					label: Some("Bouncing cube scene shadow render pass"),
+					color_attachments: &[],
+					depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachment {
+						view: shadow_map_texture_view,
+						depth_ops: Some(wgpu::Operations {
+							load: wgpu::LoadOp::Clear(1.0),
+							store: true,
+						}),
+						stencil_ops: None,
 					}),
-					stencil_ops: None,
-				}),
-			});
-			render_pass.set_pipeline(&self.shadow_map_pipeline);
-			render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
-			render_pass.set_vertex_buffer(1, self.instance_buffer.slice(..));
-			render_pass.set_index_buffer(self.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
-			render_pass.set_bind_group(0, &self.camera_bind_group, &[]);
-			render_pass.draw_indexed(0..6, 0, 0..11);
+				});
+				render_pass.set_pipeline(&self.shadow_map_pipeline);
+				render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
+				render_pass.set_vertex_buffer(1, self.instance_buffer.slice(..));
+				render_pass.set_index_buffer(self.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
+				render_pass.set_bind_group(0, &self.camera_bind_group, &[]);
+				render_pass.draw_indexed(0..6, 0, 0..11);
+			}
 		}
 
 		// Write uniforms.
@@ -507,7 +517,7 @@ impl crate::scene::Scene for BouncingCubeScene {
 						constant_attenuation: light.constant_attenuation,
 						linear_attenuation: light.linear_attenuation,
 						quadratic_attenuation: light.quadratic_attenuation,
-						camera_transform: shadow_map_transforms[i],
+						camera_transforms: shadow_map_transforms[i],
 						_padding_0: 0,
 						_padding_1: 0,
 						_padding_2: 0,
