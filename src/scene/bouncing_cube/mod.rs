@@ -449,13 +449,13 @@ impl crate::scene::Scene for BouncingCubeScene {
 			bytemuck::cast_slice(&instance_buffer_data),
 		);
 
-		let look_directions = [
-			-glam::Vec3A::X,
-			glam::Vec3A::X,
-			glam::Vec3A::new(0.01, 0.999899994999, 0.01), // TODO: this is a bad hack because the look direction can't be parallel to the up direction
-			-glam::Vec3A::new(0.01, 0.999899994999, 0.01), // TODO: this is a bad hack because the look direction can't be parallel to the up direction
-			glam::Vec3A::Z,
-			-glam::Vec3A::Z,
+		let look_and_up_directions = [
+			(-glam::Vec3A::X, -glam::Vec3A::Y),
+			(glam::Vec3A::X, -glam::Vec3A::Y),
+			(glam::Vec3A::Y, glam::Vec3A::Z),
+			(-glam::Vec3A::Y, glam::Vec3A::Z),
+			(glam::Vec3A::Z, -glam::Vec3A::Y),
+			(-glam::Vec3A::Z, -glam::Vec3A::Y),
 		];
 		let mut shadow_map_transforms = Vec::from([[[[0.0; 4]; 4]; 6]; 3]);
 		for i in 0..self.bouncing_cube_model.lights.len() {
@@ -465,7 +465,8 @@ impl crate::scene::Scene for BouncingCubeScene {
 				let mut shadow_render_camera =
 					crate::scene::utilities::camera::Camera::new(std::f32::consts::FRAC_PI_2, 1.0);
 				shadow_render_camera.position = light.position;
-				shadow_render_camera.look_direction = look_directions[j];
+				shadow_render_camera.look_direction = look_and_up_directions[j].0;
+				shadow_render_camera.up_direction = look_and_up_directions[j].1;
 				shadow_render_camera.recalculate_transformation_and_view_planes();
 				shadow_map_transforms[i][j] = shadow_render_camera.transformation.to_cols_array_2d();
 				queue.write_buffer(

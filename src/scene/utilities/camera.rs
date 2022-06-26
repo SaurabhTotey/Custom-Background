@@ -1,5 +1,3 @@
-const UP_DIRECTION: glam::Vec3A = glam::const_vec3a!([0.0, -1.0, 0.0]);
-
 pub struct Camera {
 	pub field_of_view: f32,
 	pub aspect_ratio: f32,
@@ -7,6 +5,7 @@ pub struct Camera {
 	pub far_plane_distance: f32,
 	pub position: glam::Vec3A,
 	pub look_direction: glam::Vec3A,
+	pub up_direction: glam::Vec3A,
 	pub right_direction: glam::Vec3A,
 	pub yaw: f32,
 	pub pitch: f32,
@@ -15,19 +14,15 @@ pub struct Camera {
 }
 impl Camera {
 	pub fn new(field_of_view: f32, aspect_ratio: f32) -> Self {
-		let position = glam::Vec3A::new(0.0, 0.0, -2.0);
-		let look_direction = glam::Vec3A::Z;
-		let right_direction = glam::Vec3A::X;
-		let near_plane_distance = 0.001;
-		let far_plane_distance = 1000.0;
 		let mut camera = Self {
 			field_of_view,
 			aspect_ratio,
-			near_plane_distance,
-			far_plane_distance,
-			position,
-			look_direction,
-			right_direction,
+			near_plane_distance: 0.001,
+			far_plane_distance: 1000.0,
+			position: glam::Vec3A::new(0.0, 0.0, -2.0),
+			look_direction: glam::Vec3A::Z,
+			up_direction: -glam::Vec3A::Y,
+			right_direction: glam::Vec3A::X,
 			yaw: std::f32::consts::PI / 2.0,
 			pitch: 0f32,
 			transformation: glam::Mat4::IDENTITY,
@@ -39,6 +34,7 @@ impl Camera {
 
 	/**
 	 * Mutate the camera by rotating its look and right directions by the given yaw and pitch.
+	 * Take note that the up direction does not change.
 	 * It is likely prudent to call recalculate_transformation_and_view_planes after calling this method.
 	 */
 	pub fn rotate(&mut self, yaw: f32, pitch: f32) {
@@ -51,7 +47,7 @@ impl Camera {
 		let (pitch_sin, pitch_cos) = new_pitch.sin_cos();
 		self.look_direction =
 			glam::Vec3A::new(-yaw_cos * pitch_cos, pitch_sin, yaw_sin * pitch_cos);
-		self.right_direction = self.look_direction.cross(UP_DIRECTION);
+		self.right_direction = self.look_direction.cross(self.up_direction);
 		self.pitch = new_pitch;
 	}
 
@@ -63,7 +59,7 @@ impl Camera {
 		let view_matrix = glam::Mat4::look_at_rh(
 			self.position.into(),
 			(self.position + self.look_direction).into(),
-			UP_DIRECTION.into(),
+			self.up_direction.into(),
 		);
 		let projection_matrix = glam::Mat4::perspective_rh(
 			self.field_of_view,
